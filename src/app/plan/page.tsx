@@ -138,10 +138,7 @@ export default function PlanPage() {
                             {latestLog ? (
                               <div className="mt-2 space-y-1">
                                 <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
-                                {itemLogs.length > 1 ? (
-                                  <p className="text-[11px] text-green-700 dark:text-green-300">{itemLogs.length} logs linked</p>
-                                ) : null}
-                                <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">View/edit logs →</p>
+                                <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Edit log →</p>
                               </div>
                             ) : (
                               <p className="mt-2 inline-block rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900">
