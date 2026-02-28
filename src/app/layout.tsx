@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
-import { Nav } from "@/components/nav";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -33,7 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <ThemeToggle />
             </header>
-            <Nav />
             {children}
           </main>
         </ThemeProvider>
