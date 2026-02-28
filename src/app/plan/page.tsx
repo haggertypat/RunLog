@@ -104,10 +104,11 @@ export default function PlanPage() {
                             const latestLog = itemLogs[0];
                             const isLogged = Boolean(latestLog);
                             return (
-                          <article
+                          <Link
                             key={item.id}
+                            href={`/log?planItemId=${item.id}`}
                             className={[
-                              "rounded-lg border p-3",
+                              "block rounded-lg border p-3 transition hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-500",
                               isLogged
                                 ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
                                 : "border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80",
@@ -140,16 +141,14 @@ export default function PlanPage() {
                                 {itemLogs.length > 1 ? (
                                   <p className="text-[11px] text-green-700 dark:text-green-300">{itemLogs.length} logs linked</p>
                                 ) : null}
+                                <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">View/edit logs →</p>
                               </div>
                             ) : (
-                              <Link
-                                href={`/log?planItemId=${item.id}`}
-                                className="mt-2 inline-block rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900"
-                              >
+                              <p className="mt-2 inline-block rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900">
                                 Log this
-                              </Link>
+                              </p>
                             )}
-                          </article>
+                          </Link>
                             );
                           })()
                         ))}
