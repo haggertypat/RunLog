@@ -13,8 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="mx-auto min-h-screen w-full max-w-6xl p-4 sm:p-6">
           <header className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">RunLog</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Simple training plan + logging</p>
+              <h1 className="text-2xl font-bold">Spring 5K Training Plan</h1>
             </div>
           </header>
           {children}
