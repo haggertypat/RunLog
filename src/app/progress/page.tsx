@@ -15,12 +15,12 @@ export default function ProgressPage() {
   const stats = useMemo(() => computeWeeklyStats(logs), [logs]);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <h2 className="mb-3 font-semibold">Weekly Progress</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead>
-            <tr className="border-b text-slate-500">
+            <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-600 dark:text-slate-400">
               <th className="px-2 py-2">Week</th>
               <th className="px-2 py-2">Miles</th>
               <th className="px-2 py-2">Run Count</th>
@@ -31,7 +31,7 @@ export default function ProgressPage() {
           </thead>
           <tbody>
             {stats.map((row) => (
-              <tr key={row.week} className="border-b last:border-b-0">
+              <tr key={row.week} className="border-b border-slate-200 last:border-b-0 dark:border-slate-600">
                 <td className="px-2 py-2">{row.week}</td>
                 <td className="px-2 py-2">{row.miles}</td>
                 <td className="px-2 py-2">{row.runCount}</td>
