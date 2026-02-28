@@ -88,7 +88,7 @@ export default function PlanPage() {
                 {Array.from({ length: DAYS }, (_, i) => i + 1).map((dayIndex) => {
                   const key = `${week}-${dayIndex}`;
                   const items = grid.get(key) ?? [];
-                  const date = getDateFor(week, dayIndex);
+                  const date = getDateFor(week, dayIndex+1);
                   return (
                     <td
                       key={key}
