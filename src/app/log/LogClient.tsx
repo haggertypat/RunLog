@@ -121,7 +121,6 @@ export default function LogClient() {
     <section className="space-y-4">
       {planItem ? (
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-xs uppercase text-slate-500 dark:text-slate-400">{existingLog ? "Editing log" : "New log"}</p>
           <h1 className="font-semibold">{planItem.title}</h1>
           <h2 className="">{planItem.details}</h2>
 
