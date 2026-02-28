@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
-import { Nav } from "@/components/nav";
 
 export const metadata: Metadata = {
   title: "RunLog",
@@ -18,7 +17,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <p className="text-sm text-slate-600 dark:text-slate-400">Simple training plan + logging</p>
             </div>
           </header>
-          <Nav />
           {children}
         </main>
       </body>
