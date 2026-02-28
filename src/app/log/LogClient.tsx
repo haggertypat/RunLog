@@ -122,8 +122,9 @@ export default function LogClient() {
       {planItem ? (
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <p className="text-xs uppercase text-slate-500 dark:text-slate-400">{existingLog ? "Editing log" : "New log"}</p>
-          <h2 className="font-semibold">{planItem.title}</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{planItem.details}</p>
+          <h1 className="font-semibold">{planItem.title}</h1>
+          <h2 className="">{planItem.details}</h2>
+
         </article>
       ) : null}
 
