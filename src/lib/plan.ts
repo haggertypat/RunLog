@@ -62,7 +62,7 @@ const runByWeek: Record<number, { dayIndex: number; title: string; details: stri
     { dayIndex: 1, title: "Taper: 4 x 400 @ race pace", details: "Early week taper workout: 4 x 400 m at race pace.", targetRpeMin: 7, targetRpeMax: 8 },
     { dayIndex: 3, title: "Easy", details: "Easy run during taper.", targetRpeMin: 3, targetRpeMax: 4 },
     { dayIndex: 5, title: "Easy", details: "Second easy taper run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "Race day May 9", details: "Race day. Warm up, race hard, cool down.", targetRpeMin: 9, targetRpeMax: 10 },
+    { dayIndex: 6, title: "Race day May 9", details: "Race day. Warm up, race hard, cool down.", targetRpeMin: 9, targetRpeMax: 10 },
   ],
 };
 
