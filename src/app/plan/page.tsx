@@ -6,7 +6,7 @@ import { PLAN_ITEMS } from "@/lib/plan";
 import { loadLogs } from "@/lib/storage";
 import { LogEntry } from "@/lib/types";
 
-const WEEK_ONE_START = new Date("2026-03-02"); // Monday
+const WEEK_ONE_START = new Date(2026, 2, 2); // Monday (local time)
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEKS = 10;
 const DAYS = 7;
@@ -164,7 +164,7 @@ export default function PlanPage() {
                 {Array.from({ length: DAYS }, (_, i) => i + 1).map((dayIndex) => {
                   const key = `${week}-${dayIndex}`;
                   const items = grid.get(key) ?? [];
-                  const date = getDateFor(week, dayIndex+1);
+                  const date = getDateFor(week, dayIndex);
                   return (
                     <td
                       key={key}
