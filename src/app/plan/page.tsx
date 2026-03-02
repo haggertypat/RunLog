@@ -11,6 +11,8 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEKS = 10;
 const DAYS = 7;
 
+type ViewMode = "list" | "calendar";
+
 function getDateFor(week: number, dayIndex: number): Date {
   const d = new Date(WEEK_ONE_START);
   d.setDate(d.getDate() + (week - 1) * 7 + (dayIndex - 1));
@@ -53,6 +55,8 @@ function formatTotalRange(min: number | null, max: number | null, unit: string):
 
 export default function PlanPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [selectedWeek, setSelectedWeek] = useState(1);
 
   useEffect(() => {
     setLogs(loadLogs());
@@ -130,146 +134,261 @@ export default function PlanPage() {
     return map;
   }, [logs]);
 
+  const selectedWeekItems = useMemo(() => {
+    return PLAN_ITEMS
+      .filter((item) => item.week === selectedWeek)
+      .sort((a, b) => a.dayIndex - b.dayIndex);
+  }, [selectedWeek]);
+
   return (
     <section className="space-y-4">
-      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-800">
-        <table className="w-full min-w-[800px] border-collapse">
-          <thead>
-            <tr className="border-b border-stone-200 dark:border-stone-600">
-              <th className="w-16 p-2 text-left text-xs font-medium uppercase text-stone-500 dark:text-stone-400">
-                Week
-              </th>
-              {DAY_NAMES.map((name, i) => (
-                <th
-                  key={name}
-                  className="min-w-[140px] p-2 text-center text-xs font-medium uppercase text-stone-500 dark:text-stone-400"
-                >
-                  {name}
-                </th>
-              ))}
-              <th className="min-w-[200px] p-2 text-left text-xs font-medium uppercase text-stone-500 dark:text-stone-400">
-                Weekly totals
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: WEEKS }, (_, i) => i + 1).map((week) => (
-              <tr
-                key={week}
-                className="border-b border-stone-100 dark:border-stone-700 last:border-b-0"
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-stone-400">Use list view for planning and quick logging.</p>
+        <div className="hidden items-center gap-2 rounded-lg border border-stone-700 bg-stone-800 p-1 sm:flex">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              viewMode === "list" ? "bg-stone-100 text-stone-900" : "text-stone-300 hover:text-white"
+            }`}
+          >
+            List view
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              viewMode === "calendar" ? "bg-stone-100 text-stone-900" : "text-stone-300 hover:text-white"
+            }`}
+          >
+            Calendar view
+          </button>
+        </div>
+      </div>
+
+      {viewMode === "list" ? (
+        <>
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-stone-700 bg-stone-800 p-3">
+            <p className="text-sm font-medium text-stone-200">Week {selectedWeek}</p>
+            <label className="text-xs text-stone-400">
+              Jump to week
+              <select
+                value={selectedWeek}
+                onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                className="ml-2 rounded-md border border-stone-600 bg-stone-900 px-2 py-1 text-sm text-stone-100"
               >
-                <td className="w-16 p-2 align-top text-sm font-medium text-stone-600 dark:text-stone-300">
-                  {week}
-                </td>
-                {Array.from({ length: DAYS }, (_, i) => i + 1).map((dayIndex) => {
-                  const key = `${week}-${dayIndex}`;
-                  const items = grid.get(key) ?? [];
-                  const date = getDateFor(week, dayIndex+1);
-                  return (
-                    <td
-                      key={key}
-                      className="min-w-[140px] border-l border-stone-100 p-2 align-top first:border-l-0 dark:border-stone-700"
-                    >
-                      <div className="space-y-2">
-                        <p className="text-xs text-stone-500 dark:text-stone-400">
-                          {formatCellDate(date)}
-                        </p>
-                        {items.map((item) => (
-                          (() => {
-                            const itemLogs = logsByPlanItemId.get(item.id) ?? [];
-                            const latestLog = itemLogs[0];
-                            const isLogged = Boolean(latestLog);
-                            return (
-                          <Link
-                            key={item.id}
-                            href={`/log?planItemId=${item.id}`}
-                            className={[
-                              "block rounded-lg border p-3 transition hover:ring-2 hover:ring-stone-300 dark:hover:ring-stone-500",
-                              isLogged
-                                ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
-                                : "border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/80",
-                            ].join(" ")}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="text-xs uppercase text-stone-500 dark:text-stone-400">{item.type}</p>
-                              {isLogged ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-green-800 dark:bg-green-900/40 dark:text-green-200">
-                                  ✓ Logged
-                                </span>
-                              ) : null}
-                            </div>
-                            <h3
+                {Array.from({ length: WEEKS }, (_, i) => i + 1).map((week) => (
+                  <option key={week} value={week}>
+                    Week {week}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="space-y-3">
+            {selectedWeekItems.map((item) => {
+              const itemLogs = logsByPlanItemId.get(item.id) ?? [];
+              const latestLog = itemLogs[0];
+              const isLogged = Boolean(latestLog);
+              const date = getDateFor(item.week, item.dayIndex);
+              return (
+                <Link
+                  key={item.id}
+                  href={`/log?planItemId=${item.id}`}
+                  className={[
+                    "block rounded-lg border p-4 transition hover:ring-2 hover:ring-stone-300 dark:hover:ring-stone-500",
+                    isLogged
+                      ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
+                      : "border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/80",
+                  ].join(" ")}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="text-xs uppercase text-stone-500 dark:text-stone-400">{item.type}</p>
+                      <h3
+                        className={[
+                          "mt-1 text-lg font-semibold",
+                          isLogged
+                            ? "text-stone-600 line-through dark:text-stone-400"
+                            : "text-stone-900 dark:text-stone-100",
+                        ].join(" ")}
+                      >
+                        {item.title}
+                      </h3>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-stone-500 dark:text-stone-400">{DAY_NAMES[item.dayIndex - 1]} • {formatCellDate(date)}</p>
+                      {isLogged ? (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-green-800 dark:bg-green-900/40 dark:text-green-200">
+                          ✓ Logged
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{item.description ?? item.details}</p>
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-stone-500 dark:text-stone-400">
+                    {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi") ? (
+                      <p>Miles: {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi")}</p>
+                    ) : null}
+                    {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min") ? (
+                      <p>Time: {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min")}</p>
+                    ) : null}
+                  </div>
+                  {latestLog ? (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
+                      <p className="text-[11px] font-medium text-stone-700 dark:text-stone-300">Edit log →</p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 inline-block rounded bg-stone-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-stone-100 dark:text-stone-900">
+                      Log this
+                    </p>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="relative left-1/2 right-1/2 w-[calc(100vw-2rem)] max-w-[88rem] -translate-x-1/2 overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-800 sm:w-[calc(100vw-3rem)]">
+          <table className="w-full min-w-[940px] border-collapse">
+            <thead>
+              <tr className="border-b border-stone-200 dark:border-stone-600">
+                <th className="w-16 p-2 text-left text-xs font-medium uppercase text-stone-500 dark:text-stone-400">
+                  Week
+                </th>
+                {DAY_NAMES.map((name) => (
+                  <th
+                    key={name}
+                    className="min-w-[140px] p-2 text-center text-xs font-medium uppercase text-stone-500 dark:text-stone-400"
+                  >
+                    {name}
+                  </th>
+                ))}
+                <th className="min-w-[200px] p-2 text-left text-xs font-medium uppercase text-stone-500 dark:text-stone-400">
+                  Weekly totals
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: WEEKS }, (_, i) => i + 1).map((week) => (
+                <tr
+                  key={week}
+                  className="border-b border-stone-100 dark:border-stone-700 last:border-b-0"
+                >
+                  <td className="w-16 p-2 align-top text-sm font-medium text-stone-600 dark:text-stone-300">
+                    {week}
+                  </td>
+                  {Array.from({ length: DAYS }, (_, i) => i + 1).map((dayIndex) => {
+                    const key = `${week}-${dayIndex}`;
+                    const items = grid.get(key) ?? [];
+                    const date = getDateFor(week, dayIndex);
+                    return (
+                      <td
+                        key={key}
+                        className="min-w-[140px] border-l border-stone-100 p-2 align-top first:border-l-0 dark:border-stone-700"
+                      >
+                        <div className="space-y-2">
+                          <p className="text-xs text-stone-500 dark:text-stone-400">
+                            {formatCellDate(date)}
+                          </p>
+                          {items.map((item) => (
+                            (() => {
+                              const itemLogs = logsByPlanItemId.get(item.id) ?? [];
+                              const latestLog = itemLogs[0];
+                              const isLogged = Boolean(latestLog);
+                              return (
+                            <Link
+                              key={item.id}
+                              href={`/log?planItemId=${item.id}`}
                               className={[
-                                "mt-0.5 font-semibold",
+                                "block rounded-lg border p-3 transition hover:ring-2 hover:ring-stone-300 dark:hover:ring-stone-500",
                                 isLogged
-                                  ? "text-stone-600 line-through dark:text-stone-400"
-                                  : "text-stone-900 dark:text-stone-100",
+                                  ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
+                                  : "border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/80",
                               ].join(" ")}
                             >
-                              {item.title}
-                            </h3>
-                            <p className="mt-1 line-clamp-2 text-xs text-stone-600 dark:text-stone-300">
-                              {item.description ?? item.details}
-                            </p>
-                            {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi") ? (
-                              <p className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">
-                                Miles: {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi")}
-                              </p>
-                            ) : null}
-                            {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min") ? (
-                              <p className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">
-                                Time: {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min")}
-                              </p>
-                            ) : null}
-                            {latestLog ? (
-                              <div className="mt-2 space-y-1">
-                                <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
-                                <p className="text-[11px] font-medium text-stone-700 dark:text-stone-300">Edit log →</p>
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-xs uppercase text-stone-500 dark:text-stone-400">{item.type}</p>
+                                {isLogged ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-green-800 dark:bg-green-900/40 dark:text-green-200">
+                                    ✓ Logged
+                                  </span>
+                                ) : null}
                               </div>
-                            ) : (
-                              <p className="mt-2 inline-block rounded bg-stone-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-stone-100 dark:text-stone-900">
-                                Log this
+                              <h3
+                                className={[
+                                  "mt-0.5 font-semibold",
+                                  isLogged
+                                    ? "text-stone-600 line-through dark:text-stone-400"
+                                    : "text-stone-900 dark:text-stone-100",
+                                ].join(" ")}
+                              >
+                                {item.title}
+                              </h3>
+                              <p className="mt-1 line-clamp-2 text-xs text-stone-600 dark:text-stone-300">
+                                {item.description ?? item.details}
                               </p>
-                            )}
-                          </Link>
-                            );
-                          })()
-                        ))}
-                      </div>
-                    </td>
-                  );
-                })}
-                {(() => {
-                  const totals = weeklyTotals.get(week);
-                  const estimatedMilesMin = totals?.estimatedMilesMin ?? null;
-                  const estimatedMilesMax = totals?.estimatedMilesMax ?? null;
-                  const estimatedTimeMin = totals?.estimatedTimeMin ?? null;
-                  const estimatedTimeMax = totals?.estimatedTimeMax ?? null;
-                  const actualMiles = totals?.actualMiles ?? null;
-                  const actualTime = totals?.actualTime ?? null;
+                              {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi") ? (
+                                <p className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">
+                                  Miles: {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi")}
+                                </p>
+                              ) : null}
+                              {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min") ? (
+                                <p className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">
+                                  Time: {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min")}
+                                </p>
+                              ) : null}
+                              {latestLog ? (
+                                <div className="mt-2 space-y-1">
+                                  <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
+                                  <p className="text-[11px] font-medium text-stone-700 dark:text-stone-300">Edit log →</p>
+                                </div>
+                              ) : (
+                                <p className="mt-2 inline-block rounded bg-stone-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-stone-100 dark:text-stone-900">
+                                  Log this
+                                </p>
+                              )}
+                            </Link>
+                              );
+                            })()
+                          ))}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  {(() => {
+                    const totals = weeklyTotals.get(week);
+                    const estimatedMilesMin = totals?.estimatedMilesMin ?? null;
+                    const estimatedMilesMax = totals?.estimatedMilesMax ?? null;
+                    const estimatedTimeMin = totals?.estimatedTimeMin ?? null;
+                    const estimatedTimeMax = totals?.estimatedTimeMax ?? null;
+                    const actualMiles = totals?.actualMiles ?? null;
+                    const actualTime = totals?.actualTime ?? null;
 
-                  return (
-                    <td className="min-w-[200px] border-l border-stone-100 bg-stone-50/70 p-3 align-top dark:border-stone-700 dark:bg-stone-900/20">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                        Estimated
-                      </p>
-                      <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
-                        {formatTotalRange(estimatedMilesMin, estimatedMilesMax, " mi")} • {formatTotalRange(estimatedTimeMin, estimatedTimeMax, " min")}
-                      </p>
-                      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                        Actual
-                      </p>
-                      <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
-                        {formatTotal(actualMiles, " mi")} • {formatTotal(actualTime, " min")}
-                      </p>
-                    </td>
-                  );
-                })()}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    return (
+                      <td className="min-w-[200px] border-l border-stone-100 bg-stone-50/70 p-3 align-top dark:border-stone-700 dark:bg-stone-900/20">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                          Estimated
+                        </p>
+                        <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
+                          {formatTotalRange(estimatedMilesMin, estimatedMilesMax, " mi")} • {formatTotalRange(estimatedTimeMin, estimatedTimeMax, " min")}
+                        </p>
+                        <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                          Actual
+                        </p>
+                        <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
+                          {formatTotal(actualMiles, " mi")} • {formatTotal(actualTime, " min")}
+                        </p>
+                      </td>
+                    );
+                  })()}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
