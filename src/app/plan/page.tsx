@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { PLAN_ITEMS } from "@/lib/plan";
-import { loadLogs } from "@/lib/storage";
+import { importLogs, loadLogs } from "@/lib/storage";
 import { LogEntry } from "@/lib/types";
 
 const WEEK_ONE_START = new Date(2026, 2, 2); // Monday (local time)
@@ -53,10 +53,38 @@ function formatTotalRange(min: number | null, max: number | null, unit: string):
 
 export default function PlanPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [dataMessage, setDataMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setLogs(loadLogs());
   }, []);
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `runlog-export-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setDataMessage(`Downloaded ${logs.length} log ${logs.length === 1 ? "entry" : "entries"}.`);
+  };
+
+  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const contents = await file.text();
+      const result = importLogs(contents);
+      setLogs(loadLogs());
+      setDataMessage(`Imported ${result.logsImported} log ${result.logsImported === 1 ? "entry" : "entries"}.`);
+    } catch {
+      setDataMessage("Import failed. Please select a valid JSON export file.");
+    } finally {
+      event.target.value = "";
+    }
+  };
 
   const grid = useMemo(() => {
     const map = new Map<string, typeof PLAN_ITEMS>();
@@ -132,6 +160,24 @@ export default function PlanPage() {
 
   return (
     <section className="space-y-4">
+      <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800">
+        <p className="text-sm text-stone-700 dark:text-stone-200">Logs are stored in your browser&apos;s local storage on this device.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900"
+          >
+            Download logs
+          </button>
+          <label className="cursor-pointer rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200">
+            Import logs
+            <input type="file" accept="application/json" className="sr-only" onChange={handleImport} />
+          </label>
+        </div>
+        {dataMessage ? <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{dataMessage}</p> : null}
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-800">
         <table className="w-full min-w-[800px] border-collapse">
           <thead>
