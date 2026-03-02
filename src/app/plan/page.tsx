@@ -31,7 +31,7 @@ function formatRange(min?: number, max?: number, unit = "") {
 }
 
 function formatLoggedSummary(log: LogEntry): string {
-  const parts: string[] = [`Logged ${log.date}`, `RPE ${log.rpe}`];
+  const parts: string[] = [`RPE ${log.rpe}`];
   if (typeof log.distanceMi === "number") parts.push(`${Number(log.distanceMi.toFixed(2))} mi`);
   if (typeof log.durationMin === "number") parts.push(`${Number(log.durationMin.toFixed(0))} min`);
   return parts.join(" • ");
@@ -279,7 +279,6 @@ export default function PlanPage() {
                                 <h3 className={["mt-0.5 font-semibold", isLogged ? "text-stone-600 line-through dark:text-stone-400" : "text-stone-900 dark:text-stone-100"].join(" ")}>
                                   {item.title}
                                 </h3>
-                                <p className="mt-1 line-clamp-2 text-xs text-stone-600 dark:text-stone-300">{item.description ?? item.details}</p>
                                 {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi") ? (
                                   <p className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">Miles: {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi")}</p>
                                 ) : null}
@@ -289,11 +288,8 @@ export default function PlanPage() {
                                 {latestLog ? (
                                   <div className="mt-2 space-y-1">
                                     <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
-                                    <p className="text-[11px] font-medium text-stone-700 dark:text-stone-300">Edit log →</p>
                                   </div>
-                                ) : (
-                                  <p className="mt-2 inline-block rounded bg-stone-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-stone-100 dark:text-stone-900">Log this</p>
-                                )}
+                                ) : null }
                               </Link>
                             );
                           })}
