@@ -196,7 +196,7 @@ export default function PlanPage() {
                   key={item.id}
                   href={`/log?planItemId=${item.id}`}
                   className={[
-                    "block rounded-lg border p-4 transition hover:ring-2 hover:ring-stone-300 dark:hover:ring-stone-500",
+                    "block rounded-lg border p-4 transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 dark:focus-visible:ring-stone-500",
                     isLogged
                       ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
                       : "border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/80",
@@ -302,7 +302,7 @@ export default function PlanPage() {
                               key={item.id}
                               href={`/log?planItemId=${item.id}`}
                               className={[
-                                "block rounded-lg border p-3 transition hover:ring-2 hover:ring-stone-300 dark:hover:ring-stone-500",
+                                "block rounded-lg border p-3 transition-shadow hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 dark:focus-visible:ring-stone-500",
                                 isLogged
                                   ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
                                   : "border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/80",
