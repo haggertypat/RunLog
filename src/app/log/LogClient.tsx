@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getPlanItemById } from "@/lib/plan";
 import { addLog, deleteLog, loadLogs, updateLog } from "@/lib/storage";
 import { LogEntry, PlanItemType } from "@/lib/types";
+import Link from "next/link";
 
 function formatRange(min?: number, max?: number, unit = "") {
   if (typeof min !== "number" && typeof max !== "number") return null;
@@ -143,6 +144,13 @@ export default function LogClient() {
 
   return (
     <section className="space-y-4">
+      <Link
+        href="/plan"
+        className="inline-flex items-center text-sm font-medium text-stone-700 underline-offset-2 hover:underline dark:text-stone-200"
+      >
+        ← Back to plan
+      </Link>
+
       {planItem ? (
         <article className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800">
           <h1 className="font-semibold">{planItem.title}</h1>
@@ -213,6 +221,13 @@ export default function LogClient() {
         <div className="flex gap-2">
           <button type="submit" className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900">
             {existingLog ? "Save changes" : "Save"}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200"
+            onClick={() => router.push("/plan")}
+          >
+            Cancel
           </button>
           {existingLog ? (
             <button type="button" className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:text-red-400" onClick={handleDelete}>
