@@ -59,17 +59,17 @@ export default function PlanPage() {
 
   return (
     <section className="space-y-4">
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-800">
         <table className="w-full min-w-[800px] border-collapse">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-600">
-              <th className="w-16 p-2 text-left text-xs font-medium uppercase text-slate-500 dark:text-slate-400">
+            <tr className="border-b border-stone-200 dark:border-stone-600">
+              <th className="w-16 p-2 text-left text-xs font-medium uppercase text-stone-500 dark:text-stone-400">
                 Week
               </th>
               {DAY_NAMES.map((name, i) => (
                 <th
                   key={name}
-                  className="min-w-[140px] p-2 text-center text-xs font-medium uppercase text-slate-500 dark:text-slate-400"
+                  className="min-w-[140px] p-2 text-center text-xs font-medium uppercase text-stone-500 dark:text-stone-400"
                 >
                   {name}
                 </th>
@@ -80,9 +80,9 @@ export default function PlanPage() {
             {Array.from({ length: WEEKS }, (_, i) => i + 1).map((week) => (
               <tr
                 key={week}
-                className="border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                className="border-b border-stone-100 dark:border-stone-700 last:border-b-0"
               >
-                <td className="w-16 p-2 align-top text-sm font-medium text-slate-600 dark:text-slate-300">
+                <td className="w-16 p-2 align-top text-sm font-medium text-stone-600 dark:text-stone-300">
                   {week}
                 </td>
                 {Array.from({ length: DAYS }, (_, i) => i + 1).map((dayIndex) => {
@@ -92,10 +92,10 @@ export default function PlanPage() {
                   return (
                     <td
                       key={key}
-                      className="min-w-[140px] border-l border-slate-100 p-2 align-top first:border-l-0 dark:border-slate-700"
+                      className="min-w-[140px] border-l border-stone-100 p-2 align-top first:border-l-0 dark:border-stone-700"
                     >
                       <div className="space-y-2">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs text-stone-500 dark:text-stone-400">
                           {formatCellDate(date)}
                         </p>
                         {items.map((item) => (
@@ -108,14 +108,14 @@ export default function PlanPage() {
                             key={item.id}
                             href={`/log?planItemId=${item.id}`}
                             className={[
-                              "block rounded-lg border p-3 transition hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-500",
+                              "block rounded-lg border p-3 transition hover:ring-2 hover:ring-stone-300 dark:hover:ring-stone-500",
                               isLogged
                                 ? "border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-900/10"
-                                : "border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800/80",
+                                : "border-stone-200 bg-stone-50 dark:border-stone-600 dark:bg-stone-800/80",
                             ].join(" ")}
                           >
                             <div className="flex items-start justify-between gap-2">
-                              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">{item.type}</p>
+                              <p className="text-xs uppercase text-stone-500 dark:text-stone-400">{item.type}</p>
                               {isLogged ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-green-800 dark:bg-green-900/40 dark:text-green-200">
                                   ✓ Logged
@@ -126,22 +126,22 @@ export default function PlanPage() {
                               className={[
                                 "mt-0.5 font-semibold",
                                 isLogged
-                                  ? "text-slate-600 line-through dark:text-slate-400"
-                                  : "text-slate-900 dark:text-slate-100",
+                                  ? "text-stone-600 line-through dark:text-stone-400"
+                                  : "text-stone-900 dark:text-stone-100",
                               ].join(" ")}
                             >
                               {item.title}
                             </h3>
-                            <p className="mt-1 line-clamp-2 text-xs text-slate-600 dark:text-slate-300">
+                            <p className="mt-1 line-clamp-2 text-xs text-stone-600 dark:text-stone-300">
                               {item.details}
                             </p>
                             {latestLog ? (
                               <div className="mt-2 space-y-1">
                                 <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
-                                <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">Edit log →</p>
+                                <p className="text-[11px] font-medium text-stone-700 dark:text-stone-300">Edit log →</p>
                               </div>
                             ) : (
-                              <p className="mt-2 inline-block rounded bg-slate-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900">
+                              <p className="mt-2 inline-block rounded bg-stone-900 px-2 py-1.5 text-xs font-medium text-white dark:bg-stone-100 dark:text-stone-900">
                                 Log this
                               </p>
                             )}
