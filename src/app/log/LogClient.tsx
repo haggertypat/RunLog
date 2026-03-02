@@ -6,84 +6,80 @@ import { getPlanItemById } from "@/lib/plan";
 import { addLog, deleteLog, loadLogs, updateLog } from "@/lib/storage";
 import { LogEntry, PlanItemType } from "@/lib/types";
 
-const today = new Date().toISOString().slice(0, 10);
+function formatRange(min?: number, max?: number, unit = "") {
+  if (typeof min !== "number" && typeof max !== "number") return null;
+  if (typeof min === "number" && typeof max === "number") {
+    return `${min}–${max}${unit}`;
+  }
+  return `${typeof min === "number" ? min : max}${unit}`;
+}
 
 export default function LogClient() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const planItemId = searchParams.get("planItemId") ?? "";
   const planItem = useMemo(() => (planItemId ? getPlanItemById(planItemId) : undefined), [planItemId]);
 
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [week, setWeek] = useState(planItem?.week ?? 1);
   const [type, setType] = useState<PlanItemType>(planItem?.type ?? "run");
   const [distanceMi, setDistanceMi] = useState("");
   const [durationMin, setDurationMin] = useState("");
   const [rpe, setRpe] = useState(String(planItem?.targetRpeMin ?? 5));
-  const [surface, setSurface] = useState("Road");
+  const [surface, setSurface] = useState("");
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  useEffect(() => {
-    setLogs(loadLogs());
-  }, []);
 
   const existingLog = useMemo(() => {
     if (!planItem) return null;
     return logs.find((log) => log.planItemId === planItem.id) ?? null;
   }, [logs, planItem]);
 
+  const refreshLogs = () => {
+    setLogs(loadLogs());
+    router.refresh();
+  };
+
+  useEffect(() => {
+    setLogs(loadLogs());
+  }, []);
+
   useEffect(() => {
     if (existingLog) {
       setDate(existingLog.date);
       setWeek(existingLog.week);
       setType(existingLog.type);
-      setDistanceMi(existingLog.distanceMi?.toString() ?? "");
-      setDurationMin(existingLog.durationMin?.toString() ?? "");
+      setDistanceMi(existingLog.distanceMi != null ? String(existingLog.distanceMi) : "");
+      setDurationMin(existingLog.durationMin != null ? String(existingLog.durationMin) : "");
       setRpe(String(existingLog.rpe));
       setSurface(existingLog.surface);
       setNotes(existingLog.notes);
       return;
     }
 
-    setDate(today);
+    setDate(new Date().toISOString().slice(0, 10));
     setWeek(planItem?.week ?? 1);
     setType(planItem?.type ?? "run");
-    setDistanceMi("");
-    setDurationMin("");
+    setDistanceMi(planItem?.estimatedMilesMin != null ? String(planItem.estimatedMilesMin) : "");
+    setDurationMin(planItem?.estimatedTimeMin != null ? String(planItem.estimatedTimeMin) : "");
     setRpe(String(planItem?.targetRpeMin ?? 5));
-    setSurface("Road");
+    setSurface("");
     setNotes("");
   }, [existingLog, planItem]);
 
-  const refreshLogs = () => {
-    setLogs(loadLogs());
-    router.refresh();
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!date) {
-      setError("Date is required.");
-      return;
-    }
-
-    const parsedRpe = Number(rpe);
-    if (Number.isNaN(parsedRpe) || parsedRpe < 1 || parsedRpe > 10) {
-      setError("RPE must be between 1 and 10.");
-      return;
-    }
+    setError(null);
+    setSuccess(null);
 
     const parsedWeek = Number(week);
-    if (Number.isNaN(parsedWeek) || parsedWeek < 1 || parsedWeek > 10) {
-      setError("Week must be between 1 and 10.");
-      return;
-    }
+    const parsedRpe = Number(rpe);
+
+    if (!date) return setError("Date is required.");
+    if (!parsedWeek || parsedWeek < 1 || parsedWeek > 10) return setError("Week must be 1-10.");
+    if (!parsedRpe || parsedRpe < 1 || parsedRpe > 10) return setError("RPE must be 1-10.");
 
     const entry: LogEntry = {
       id: existingLog?.id ?? crypto.randomUUID(),
@@ -122,8 +118,20 @@ export default function LogClient() {
       {planItem ? (
         <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <h1 className="font-semibold">{planItem.title}</h1>
-          <h2 className="">{planItem.details}</h2>
-
+          <h2 className="text-sm text-slate-600 dark:text-slate-300">{planItem.details}</h2>
+          {planItem.description ? <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{planItem.description}</p> : null}
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            {formatRange(planItem.estimatedMilesMin, planItem.estimatedMilesMax, " mi") ? (
+              <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-700">
+                Est. miles: {formatRange(planItem.estimatedMilesMin, planItem.estimatedMilesMax, " mi")}
+              </span>
+            ) : null}
+            {formatRange(planItem.estimatedTimeMin, planItem.estimatedTimeMax, " min") ? (
+              <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-700">
+                Est. time: {formatRange(planItem.estimatedTimeMin, planItem.estimatedTimeMax, " min")}
+              </span>
+            ) : null}
+          </div>
         </article>
       ) : null}
 
@@ -136,83 +144,38 @@ export default function LogClient() {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
             Date
-            <input
-              type="date"
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <input type="date" className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
           <label className="text-sm">
             Week
-            <input
-              type="number"
-              min={1}
-              max={10}
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={week}
-              onChange={(e) => setWeek(Number(e.target.value))}
-            />
+            <input type="number" min={1} max={10} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={week} onChange={(e) => setWeek(Number(e.target.value))} />
           </label>
           <label className="text-sm">
             Type
-            <select
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={type}
-              onChange={(e) => setType(e.target.value as PlanItemType)}
-            >
+            <select className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={type} onChange={(e) => setType(e.target.value as PlanItemType)}>
               <option value="run">Run</option>
               <option value="strength">Strength</option>
             </select>
           </label>
           <label className="text-sm">
             RPE (1-10)
-            <input
-              type="number"
-              min={1}
-              max={10}
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={rpe}
-              onChange={(e) => setRpe(e.target.value)}
-            />
+            <input type="number" min={1} max={10} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={rpe} onChange={(e) => setRpe(e.target.value)} />
           </label>
           <label className="text-sm">
             Distance (mi)
-            <input
-              type="number"
-              step="0.01"
-              min={0}
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={distanceMi}
-              onChange={(e) => setDistanceMi(e.target.value)}
-            />
+            <input type="number" step="0.01" min={0} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={distanceMi} onChange={(e) => setDistanceMi(e.target.value)} />
           </label>
           <label className="text-sm">
             Duration (min)
-            <input
-              type="number"
-              min={0}
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={durationMin}
-              onChange={(e) => setDurationMin(e.target.value)}
-            />
+            <input type="number" min={0} className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} />
           </label>
           <label className="text-sm">
             Surface
-            <input
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              value={surface}
-              onChange={(e) => setSurface(e.target.value)}
-            />
+            <input className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" value={surface} onChange={(e) => setSurface(e.target.value)} />
           </label>
           <label className="text-sm sm:col-span-2">
             Notes
-            <textarea
-              className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
+            <textarea className="mt-1 w-full rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
         </div>
 
@@ -220,18 +183,11 @@ export default function LogClient() {
         {success ? <p className="text-sm text-green-700 dark:text-green-400">{success}</p> : null}
 
         <div className="flex gap-2">
-          <button
-            type="submit"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900"
-          >
+          <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900">
             {existingLog ? "Save changes" : "Save"}
           </button>
           {existingLog ? (
-            <button
-              type="button"
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:text-red-400"
-              onClick={handleDelete}
-            >
+            <button type="button" className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:text-red-400" onClick={handleDelete}>
               Delete log
             </button>
           ) : null}
