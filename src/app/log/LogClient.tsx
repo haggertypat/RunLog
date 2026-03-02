@@ -14,6 +14,29 @@ function formatRange(min?: number, max?: number, unit = "") {
   return `${typeof min === "number" ? min : max}${unit}`;
 }
 
+function parseDurationToMinutes(input: string): number | null {
+  const value = input.trim();
+  if (!value) return null;
+
+  if (/^\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+
+  const parts = value.split(":");
+  if (parts.length !== 2 && parts.length !== 3) return null;
+  if (parts.some((part) => !/^\d+$/.test(part))) return null;
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts.map(Number);
+    if (seconds > 59) return null;
+    return minutes + seconds / 60;
+  }
+
+  const [hours, minutes, seconds] = parts.map(Number);
+  if (minutes > 59 || seconds > 59) return null;
+  return hours * 60 + minutes + seconds / 60;
+}
+
 export default function LogClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -81,6 +104,11 @@ export default function LogClient() {
     if (!parsedWeek || parsedWeek < 1 || parsedWeek > 10) return setError("Week must be 1-10.");
     if (!parsedRpe || parsedRpe < 1 || parsedRpe > 10) return setError("RPE must be 1-10.");
 
+    const parsedDurationMin = parseDurationToMinutes(durationMin);
+    if (durationMin.trim() && parsedDurationMin == null) {
+      return setError("Duration must be minutes (e.g. 45) or a time string like mm:ss or hh:mm:ss.");
+    }
+
     const entry: LogEntry = {
       id: existingLog?.id ?? crypto.randomUUID(),
       date,
@@ -88,7 +116,7 @@ export default function LogClient() {
       week: parsedWeek,
       type,
       distanceMi: distanceMi ? Number(distanceMi) : undefined,
-      durationMin: durationMin ? Number(durationMin) : undefined,
+      durationMin: parsedDurationMin ?? undefined,
       rpe: parsedRpe,
       surface,
       notes,
@@ -166,8 +194,8 @@ export default function LogClient() {
             <input type="number" step="0.01" min={0} className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={distanceMi} onChange={(e) => setDistanceMi(e.target.value)} />
           </label>
           <label className="text-sm">
-            Duration (min)
-            <input type="number" min={0} className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} />
+            Duration (min or mm:ss / hh:mm:ss)
+            <input type="text" inputMode="decimal" placeholder="45 or 1:05:30" className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} />
           </label>
           <label className="text-sm">
             Surface
