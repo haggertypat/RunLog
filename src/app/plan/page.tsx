@@ -21,6 +21,12 @@ function formatCellDate(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function formatRange(min?: number, max?: number, unit = "") {
+  if (typeof min !== "number" && typeof max !== "number") return null;
+  if (typeof min === "number" && typeof max === "number") return `${min}–${max}${unit}`;
+  return `${typeof min === "number" ? min : max}${unit}`;
+}
+
 function formatLoggedSummary(log: LogEntry): string {
   const parts: string[] = [`Logged ${log.date}`, `RPE ${log.rpe}`];
   if (typeof log.distanceMi === "number") parts.push(`${Number(log.distanceMi.toFixed(2))} mi`);
@@ -133,8 +139,18 @@ export default function PlanPage() {
                               {item.title}
                             </h3>
                             <p className="mt-1 line-clamp-2 text-xs text-stone-600 dark:text-stone-300">
-                              {item.details}
+                              {item.description ?? item.details}
                             </p>
+                            {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi") ? (
+                              <p className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">
+                                Miles: {formatRange(item.estimatedMilesMin, item.estimatedMilesMax, " mi")}
+                              </p>
+                            ) : null}
+                            {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min") ? (
+                              <p className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400">
+                                Time: {formatRange(item.estimatedTimeMin, item.estimatedTimeMax, " min")}
+                              </p>
+                            ) : null}
                             {latestLog ? (
                               <div className="mt-2 space-y-1">
                                 <p className="text-xs text-green-800 dark:text-green-200">{formatLoggedSummary(latestLog)}</p>
