@@ -11,7 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body>
-        <main className="mx-auto min-h-screen w-full max-w-6xl p-4 sm:p-6">
+        <main className="mx-auto min-h-screen w-full max-w-4xl p-4 sm:p-6">
           <header className="mb-4 flex items-start justify-between gap-4">
             <div>
             <Link
