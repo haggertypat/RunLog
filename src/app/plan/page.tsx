@@ -293,6 +293,12 @@ export default function PlanPage() {
                               </Link>
                             );
                           })}
+                          {items.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-stone-300 bg-stone-50 p-3 dark:border-stone-600 dark:bg-stone-800/60">
+                              <p className="text-xs uppercase text-stone-500 dark:text-stone-400">Rest day</p>
+                              <p className="mt-1 text-sm font-medium text-stone-700 dark:text-stone-200">No workout scheduled</p>
+                            </div>
+                          ) : null}
                         </div>
                       </td>
                     );
