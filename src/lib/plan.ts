@@ -86,15 +86,21 @@ const PLAN_BY_WEEK: Record<number, PlanSeedItem[]> = {
 export const PLAN_ITEMS: PlanItem[] = Object.entries(PLAN_BY_WEEK)
   .flatMap(([weekKey, items]) => {
     const week = Number(weekKey);
-    return items.map((item, index) => {
-      const type = item.type ?? (item.title.startsWith("Strength") ? "strength" : "run");
-      return {
-        ...item,
-        id: `w${week}-${type}-${index + 1}`,
-        week,
-        type,
-      };
-    });
+    const nextByType: Record<PlanItemType, number> = { run: 0, strength: 0 };
+
+    return [...items]
+      .sort((a, b) => a.dayIndex - b.dayIndex)
+      .map((item) => {
+        const type = item.type ?? (item.title.startsWith("Strength") ? "strength" : "run");
+        nextByType[type] += 1;
+
+        return {
+          ...item,
+          id: `w${week}-${type}-${nextByType[type]}`,
+          week,
+          type,
+        };
+      });
   })
   .sort((a, b) => (a.week - b.week) || (a.dayIndex - b.dayIndex));
 
