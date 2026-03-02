@@ -194,28 +194,9 @@ export default function PlanPage() {
 
   return (
     <section className="space-y-4">
-      <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800">
-        <p className="text-sm text-stone-700 dark:text-stone-200">Logs are stored in your browser&apos;s local storage on this device.</p>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExport}
-            className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900"
-          >
-            Download logs
-          </button>
-          <label className="cursor-pointer rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200">
-            Import logs
-            <input type="file" accept="application/json" className="sr-only" onChange={handleImport} />
-          </label>
-        </div>
-        {dataMessage ? <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{dataMessage}</p> : null}
-      </div>
-
-      <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-600 dark:text-stone-300">Workout plan view</h2>
-          <div className="flex items-center gap-2 rounded-lg border border-stone-200 p-1 dark:border-stone-600">
+      <div className="">
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="flex items-center gap-2 p-1">
             <button
               type="button"
               onClick={() => setPlanViewMode("list")}
@@ -349,10 +330,8 @@ export default function PlanPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800">
-            <label className="text-sm font-medium text-stone-700 dark:text-stone-200" htmlFor="week-select">
-              Week
-            </label>
+          <div className="flex flex-wrap items-center justify-end gap-3 p-4">
+
             <select
               id="week-select"
               value={selectedWeek}
@@ -418,6 +397,24 @@ export default function PlanPage() {
           })}
         </div>
       )}
+       <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800">
+        <p className="text-sm text-stone-700 dark:text-stone-200">Logs are stored in your browser&apos;s local storage on this device.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white dark:bg-stone-100 dark:text-stone-900"
+          >
+            Download logs
+          </button>
+          <label className="cursor-pointer rounded-lg border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200">
+            Import logs
+            <input type="file" accept="application/json" className="sr-only" onChange={handleImport} />
+          </label>
+        </div>
+        {dataMessage ? <p className="mt-2 text-sm text-stone-600 dark:text-stone-300">{dataMessage}</p> : null}
+      </div>
+
     </section>
   );
 }
