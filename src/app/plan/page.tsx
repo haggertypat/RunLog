@@ -34,6 +34,12 @@ function formatLoggedSummary(log: LogEntry): string {
   return parts.join(" • ");
 }
 
+function formatTotal(value: number | null, unit: string): string {
+  if (value === null) return "—";
+  const rounded = Number.isInteger(value) ? value : Number(value.toFixed(1));
+  return `${rounded}${unit}`;
+}
+
 export default function PlanPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -63,6 +69,45 @@ export default function PlanPage() {
     return map;
   }, [logs]);
 
+  const weeklyTotals = useMemo(() => {
+    const map = new Map<number, {
+      estimatedMiles: number;
+      estimatedTime: number;
+      actualMiles: number;
+      actualTime: number;
+    }>();
+
+    for (let week = 1; week <= WEEKS; week += 1) {
+      map.set(week, { estimatedMiles: 0, estimatedTime: 0, actualMiles: 0, actualTime: 0 });
+    }
+
+    for (const item of PLAN_ITEMS) {
+      const totals = map.get(item.week);
+      if (!totals) continue;
+
+      if (typeof item.estimatedMilesMin === "number" || typeof item.estimatedMilesMax === "number") {
+        const low = item.estimatedMilesMin ?? item.estimatedMilesMax ?? 0;
+        const high = item.estimatedMilesMax ?? item.estimatedMilesMin ?? 0;
+        totals.estimatedMiles += (low + high) / 2;
+      }
+
+      if (typeof item.estimatedTimeMin === "number" || typeof item.estimatedTimeMax === "number") {
+        const low = item.estimatedTimeMin ?? item.estimatedTimeMax ?? 0;
+        const high = item.estimatedTimeMax ?? item.estimatedTimeMin ?? 0;
+        totals.estimatedTime += (low + high) / 2;
+      }
+    }
+
+    for (const log of logs) {
+      const totals = map.get(log.week);
+      if (!totals) continue;
+      if (typeof log.distanceMi === "number") totals.actualMiles += log.distanceMi;
+      if (typeof log.durationMin === "number") totals.actualTime += log.durationMin;
+    }
+
+    return map;
+  }, [logs]);
+
   return (
     <section className="space-y-4">
       <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm dark:border-stone-700 dark:bg-stone-800">
@@ -80,6 +125,9 @@ export default function PlanPage() {
                   {name}
                 </th>
               ))}
+              <th className="min-w-[200px] p-2 text-left text-xs font-medium uppercase text-stone-500 dark:text-stone-400">
+                Weekly totals
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -169,6 +217,30 @@ export default function PlanPage() {
                     </td>
                   );
                 })}
+                {(() => {
+                  const totals = weeklyTotals.get(week);
+                  const estimatedMiles = totals?.estimatedMiles ?? null;
+                  const estimatedTime = totals?.estimatedTime ?? null;
+                  const actualMiles = totals?.actualMiles ?? null;
+                  const actualTime = totals?.actualTime ?? null;
+
+                  return (
+                    <td className="min-w-[200px] border-l border-stone-100 bg-stone-50/70 p-3 align-top dark:border-stone-700 dark:bg-stone-900/20">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                        Estimated
+                      </p>
+                      <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
+                        {formatTotal(estimatedMiles, " mi")} • {formatTotal(estimatedTime, " min")}
+                      </p>
+                      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                        Actual
+                      </p>
+                      <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
+                        {formatTotal(actualMiles, " mi")} • {formatTotal(actualTime, " min")}
+                      </p>
+                    </td>
+                  );
+                })()}
               </tr>
             ))}
           </tbody>
