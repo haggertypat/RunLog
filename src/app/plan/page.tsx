@@ -40,6 +40,17 @@ function formatTotal(value: number | null, unit: string): string {
   return `${rounded}${unit}`;
 }
 
+function formatTotalRange(min: number | null, max: number | null, unit: string): string {
+  if (min === null && max === null) return "—";
+  if (min !== null && max !== null) {
+    const low = Number.isInteger(min) ? min : Number(min.toFixed(1));
+    const high = Number.isInteger(max) ? max : Number(max.toFixed(1));
+    return `${low}–${high}${unit}`;
+  }
+  const single = min ?? max;
+  return formatTotal(single, unit);
+}
+
 export default function PlanPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
@@ -71,14 +82,23 @@ export default function PlanPage() {
 
   const weeklyTotals = useMemo(() => {
     const map = new Map<number, {
-      estimatedMiles: number;
-      estimatedTime: number;
+      estimatedMilesMin: number;
+      estimatedMilesMax: number;
+      estimatedTimeMin: number;
+      estimatedTimeMax: number;
       actualMiles: number;
       actualTime: number;
     }>();
 
     for (let week = 1; week <= WEEKS; week += 1) {
-      map.set(week, { estimatedMiles: 0, estimatedTime: 0, actualMiles: 0, actualTime: 0 });
+      map.set(week, {
+        estimatedMilesMin: 0,
+        estimatedMilesMax: 0,
+        estimatedTimeMin: 0,
+        estimatedTimeMax: 0,
+        actualMiles: 0,
+        actualTime: 0,
+      });
     }
 
     for (const item of PLAN_ITEMS) {
@@ -88,13 +108,15 @@ export default function PlanPage() {
       if (typeof item.estimatedMilesMin === "number" || typeof item.estimatedMilesMax === "number") {
         const low = item.estimatedMilesMin ?? item.estimatedMilesMax ?? 0;
         const high = item.estimatedMilesMax ?? item.estimatedMilesMin ?? 0;
-        totals.estimatedMiles += (low + high) / 2;
+        totals.estimatedMilesMin += low;
+        totals.estimatedMilesMax += high;
       }
 
       if (typeof item.estimatedTimeMin === "number" || typeof item.estimatedTimeMax === "number") {
         const low = item.estimatedTimeMin ?? item.estimatedTimeMax ?? 0;
         const high = item.estimatedTimeMax ?? item.estimatedTimeMin ?? 0;
-        totals.estimatedTime += (low + high) / 2;
+        totals.estimatedTimeMin += low;
+        totals.estimatedTimeMax += high;
       }
     }
 
@@ -219,8 +241,10 @@ export default function PlanPage() {
                 })}
                 {(() => {
                   const totals = weeklyTotals.get(week);
-                  const estimatedMiles = totals?.estimatedMiles ?? null;
-                  const estimatedTime = totals?.estimatedTime ?? null;
+                  const estimatedMilesMin = totals?.estimatedMilesMin ?? null;
+                  const estimatedMilesMax = totals?.estimatedMilesMax ?? null;
+                  const estimatedTimeMin = totals?.estimatedTimeMin ?? null;
+                  const estimatedTimeMax = totals?.estimatedTimeMax ?? null;
                   const actualMiles = totals?.actualMiles ?? null;
                   const actualTime = totals?.actualTime ?? null;
 
@@ -230,7 +254,7 @@ export default function PlanPage() {
                         Estimated
                       </p>
                       <p className="mt-1 text-sm text-stone-700 dark:text-stone-200">
-                        {formatTotal(estimatedMiles, " mi")} • {formatTotal(estimatedTime, " min")}
+                        {formatTotalRange(estimatedMilesMin, estimatedMilesMax, " mi")} • {formatTotalRange(estimatedTimeMin, estimatedTimeMax, " min")}
                       </p>
                       <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
                         Actual
