@@ -1,108 +1,101 @@
-import { PlanItem } from "@/lib/types";
+import { PlanItem, PlanItemType } from "@/lib/types";
 
-const strengthDetails =
-  "2 rounds: calves/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank.";
+type PlanSeedItem = Omit<PlanItem, "id" | "week" | "type"> & { type?: PlanItemType };
 
-const runByWeek: Record<number, { dayIndex: number; title: string; details: string; targetRpeMin?: number; targetRpeMax?: number; strides?: string }[]> = {
+const PLAN_BY_WEEK: Record<number, PlanSeedItem[]> = {
   1: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "3 x 5 min threshold", details: "3 x 5 min threshold with 2 min easy jog recoveries.", targetRpeMin: 7, targetRpeMax: 8 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "55 min long", details: "Steady long run for 55 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 4, estimatedMilesMax: 5, estimatedTimeMin: 40, estimatedTimeMax: 50, description: "Warm up 10 min very easy (RPE 2–3). Then run easy (RPE 3–4). Finish with 6 x 20s relaxed strides (fast-but-smooth, not sprinting) with 60–90s easy jog/walk between. Cool down 5–10 min easy. Optional: 2–3 min light mobility after." },
+    { dayIndex: 2, type: "strength", title: "Strength A (durability circuit)", details: "2 rounds: calves/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds, smooth and controlled (RPE 5–6). Calf raises: 12–15 reps straight-knee + 12–15 bent-knee (soleus). Tib raises: 12–20. Split squats: 8–12/side. Single-leg RDL: 8–10/side. Dead bugs: 6–10/side (slow). Side plank: 30–45s/side. Rest 30–60s between moves as needed. Stop 1–2 reps before failure." },
+    { dayIndex: 3, title: "3 x 5 min threshold", details: "3 x 5 min threshold with 2 min easy jog recoveries.", targetRpeMin: 7, targetRpeMax: 8, estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Warm up 12–15 min easy + 3–4 x 20s strides (optional if legs feel good). Main set: 3 x 5 min at controlled threshold (RPE 7–8; strong but sustainable) with 2 min easy jog recoveries. Cool down 10 min easy. Form cue: tall posture, quick cadence, relaxed shoulders. If shin/calf niggles show up, keep it closer to RPE 7." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 4, estimatedMilesMax: 5, estimatedTimeMin: 40, estimatedTimeMax: 50, description: "Keep it truly easy (RPE 3–4; conversational). Start with 5 min extra easy to settle in; finish with 5 min easy to cool down. Choose soft surface if possible. Goal: relaxed aerobic volume, not pace. If you feel spicy, add 4 x 15–20s strides at the end (optional)." },
+    { dayIndex: 6, type: "strength", title: "Strength B (hip/core + calves)", details: "2 rounds: step-ups, calf/soleus raises, tib raises, glute bridge march, bird dog, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds, steady (RPE 5–6). Step-ups: 8–12/side (knee tracks over midfoot). Calf raises: 12–15 straight-knee + 12–15 bent-knee. Tib raises: 12–20. Glute bridge march: 8–12/side. Bird dog: 6–10/side (slow). Side plank: 30–45s/side. Rest 30–60s as needed." },
+    { dayIndex: 7, title: "55 min long", details: "Steady long run for 55 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 6, estimatedMilesMax: 7, estimatedTimeMin: 55, estimatedTimeMax: 60, description: "Run 55 min steady and comfortable (RPE 4–5). First 10 min easy, middle steady, last 10 min smooth—no pushing. Prioritize time on feet and relaxed form. If on snow/ice, shorten stride and keep effort even. Cool down = last 5–10 min very easy." },
   ],
   2: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "4 x 5 min threshold", details: "4 x 5 min threshold with 2 min easy jog recoveries.", targetRpeMin: 7, targetRpeMax: 8 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Warm up 10 min very easy. Run easy (RPE 3–4). Finish with 6 x 20s relaxed strides with 60–90s easy jog/walk between. Cool down 5–10 min easy. Keep strides smooth; stop at 4–5 reps if calves feel cranky." },
+    { dayIndex: 2, type: "strength", title: "Strength A (durability circuit)", details: "2 rounds: calves/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Add a small progression: either +1–2 reps per set or a slightly slower lowering phase (3 seconds down) on split squats and RDLs. Keep calves/tib work smooth; stop before burning form breaks." },
+    { dayIndex: 3, title: "4 x 5 min threshold", details: "4 x 5 min threshold with 2 min easy jog recoveries.", targetRpeMin: 7, targetRpeMax: 8, estimatedMilesMin: 5.5, estimatedMilesMax: 6.5, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 12–15 min easy + 3 x 20s strides (optional). Main set: 4 x 5 min at threshold (RPE 7–8) with 2 min easy jog. Cool down 10 min easy. Goal is consistency: all reps feel similar; don’t ‘race’ the last one." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Easy/conversational (RPE 3–4). Use this as recovery from Wednesday. 5 min extra easy at start, 5 min easy at end. If you’re on roads, avoid pushing pace—keep cadence light and stride short." },
+    { dayIndex: 6, type: "strength", title: "Strength C (single-leg + trunk)", details: "2 rounds: single-leg RDL, lateral lunge, tib raises, calf/soleus raises, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Single-leg RDL: 8–10/side. Lateral lunge: 6–10/side (hip back). Tib raises: 12–20. Calf raises: 12–15 straight-knee + 12–15 bent-knee. Dead bugs: 6–10/side. Side plank: 30–45s/side. Keep everything controlled." },
+    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 6.5, estimatedMilesMax: 7.5, estimatedTimeMin: 60, estimatedTimeMax: 65, description: "60 min steady (RPE 4–5). First 10 min easy, last 10 min easy. Fuel/hydration not required at this length, but bring water if dry air headaches are a thing. Keep effort smooth on hills." },
   ],
   3: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "3 x 8 min threshold", details: "3 x 8 min threshold with 2–3 min easy jog recoveries.", targetRpeMin: 7, targetRpeMax: 8 },
-    { dayIndex: 5, title: "Easy + pickups", details: "Easy run + 6 x 30s smooth pickups.", targetRpeMin: 4, targetRpeMax: 6, strides: "6x30s pickups" },
-    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Warm up 10 min very easy. Run easy (RPE 3–4). Finish with 6 x 20s relaxed strides with 60–90s easy jog/walk between. Cool down 5–10 min easy. Strides = smooth mechanics practice, not a workout." },
+    { dayIndex: 2, type: "strength", title: "Strength A (durability circuit)", details: "2 rounds: calves/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Keep split squats and RDLs a touch heavier/harder this week (slower lowering, deeper control). Optional finisher: 1 extra set of tib raises (10–15) if shins feel good." },
+    { dayIndex: 3, title: "3 x 8 min threshold", details: "3 x 8 min threshold with 2–3 min easy jog recoveries.", targetRpeMin: 7, targetRpeMax: 8, estimatedMilesMin: 6, estimatedMilesMax: 6.5, estimatedTimeMin: 55, estimatedTimeMax: 65, description: "Warm up 12–15 min easy + 3 x 20s strides. Main set: 3 x 8 min at threshold (RPE 7–8) with 2–3 min easy jog. Cool down 10 min easy. ‘Threshold’ should feel like you could hold it for ~40–60 min if you had to—strong but controlled." },
+    { dayIndex: 5, title: "Easy + pickups", details: "Easy run + 6 x 30s smooth pickups.", targetRpeMin: 4, targetRpeMax: 6, strides: "6x30s pickups", estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Warm up 10 min easy. Run easy (RPE 3–4). Add 6 x 30s smooth pickups (RPE ~5–6) with 60–90s very easy between. Cool down 5–10 min easy. Pickups are controlled ‘gears’—avoid sprinting or straining calves." },
+    { dayIndex: 6, type: "strength", title: "Strength D (posterior chain + calves)", details: "2 rounds: hip hinge (good morning or band hinge), calf/soleus raises, tib raises, reverse lunge, bird dog, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Hip hinge: 10–15. Reverse lunge: 8–12/side. Calf raises: 12–15 straight-knee + 12–15 bent-knee. Tib raises: 12–20. Bird dog: 6–10/side. Side plank: 30–45s/side. Quality > quantity." },
+    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 6.5, estimatedMilesMax: 7.5, estimatedTimeMin: 60, estimatedTimeMax: 65, description: "60 min steady (RPE 4–5). Keep it comfortable; you should finish feeling like you could keep going. Choose the least icy surface available and keep effort even." },
   ],
   4: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "6 x 2 min @ RPE 8", details: "6 x 2 min hard with 2 min easy recoveries.", targetRpeMin: 8, targetRpeMax: 8 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 10 min very easy. Run easy (RPE 3–4). Finish with 6 x 20s relaxed strides w/ 60–90s easy jog/walk. Cool down 5–10 min easy. If legs are tired from this block, do only 4 strides." },
+    { dayIndex: 2, type: "strength", title: "Strength A (durability circuit)", details: "2 rounds: calves/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Keep this one lighter/cleaner to support the harder speed work this week. Prioritize excellent form and stop early if legs feel heavy." },
+    { dayIndex: 3, title: "6 x 2 min @ RPE 8", details: "6 x 2 min hard with 2 min easy recoveries.", targetRpeMin: 8, targetRpeMax: 8, estimatedMilesMin: 5.5, estimatedMilesMax: 6.5, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 15 min easy + 3 x 20s strides. Main set: 6 x 2 min hard (RPE 8) with 2 min easy jog. Cool down 10 min easy. Hard reps should be ‘fast but controlled’—avoid sprint mechanics, especially on snow/ice." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Easy recovery (RPE 3–4). Keep it smooth and relaxed; this run makes Wednesday’s work absorb. Add 5 min very easy at start and end. If you feel beat up, shorten by 10 min." },
+    { dayIndex: 6, type: "strength", title: "Strength E (lateral + core)", details: "2 rounds: lateral lunge, step-ups, tib raises, calf/soleus raises, dead bug, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Lateral lunge: 6–10/side. Step-ups: 8–12/side. Tib raises: 12–20. Calf raises: 12–15 straight-knee + 12–15 bent-knee. Dead bug: 6–10/side. Side plank: 30–45s/side. Controlled, no rushing." },
+    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 7, estimatedMilesMax: 8, estimatedTimeMin: 65, estimatedTimeMax: 70, description: "65 min steady (RPE 4–5). First 10 min easy, last 10 min easy. Optional: finish with 4 x 20s relaxed strides if legs feel great (skip if calves/shins are sensitive)." },
   ],
   5: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "2-mile controlled time trial", details: "2-mile controlled time trial. Strong, even effort.", targetRpeMin: 8, targetRpeMax: 9 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 10 min very easy. Run easy (RPE 3–4). Finish with 6 x 20s relaxed strides w/ 60–90s easy between. Cool down 5–10 min easy. Keep strides smooth and stop early if anything feels ‘sharp’." },
+    { dayIndex: 2, type: "strength", title: "Strength F (split squat focus)", details: "2 rounds: split squats, single-leg RDL, calf/soleus raises, tib raises, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Make split squats the focus: 10–12/side with slow lowering (3 sec down). Single-leg RDL: 8–10/side. Calf raises: 12–15 straight + 12–15 bent. Tib raises: 12–20. Dead bugs: 6–10/side. Side plank: 30–45s/side." },
+    { dayIndex: 3, title: "2-mile controlled time trial", details: "2-mile controlled time trial. Strong, even effort.", targetRpeMin: 8, targetRpeMax: 9, estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 15 min easy + 4 x 20s strides + 2–3 min easy. Time trial: 2 miles hard-but-even (RPE 8–9). Aim for steady effort—don’t surge early. Cool down 10–15 min easy. Notes: record how it felt (RPE, breathing, shin/calf status) more than the pace." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Easy recovery (RPE 3–4). Keep it light and conversational. 5 min extra easy at the start and end. If Thursday/Friday legs feel heavy, shorten this run before you reduce intensity elsewhere." },
+    { dayIndex: 6, type: "strength", title: "Strength G (hinge + trunk)", details: "2 rounds: hip hinge, reverse lunge, calf/soleus raises, tib raises, bird dog, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Hip hinge: 10–15. Reverse lunge: 8–12/side. Calf raises: 12–15 straight + 12–15 bent. Tib raises: 12–20. Bird dog: 6–10/side. Side plank: 30–45s/side. Keep spine neutral; move slow." },
+    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 7, estimatedMilesMax: 8, estimatedTimeMin: 65, estimatedTimeMax: 70, description: "65 min steady (RPE 4–5). Keep it comfortable; avoid turning this into a progression run. If conditions force slower running, that’s fine—time on feet is the goal." },
   ],
   6: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "5 x 3 min @ RPE 8", details: "5 x 3 min hard with 2 min easy recoveries.", targetRpeMin: 8, targetRpeMax: 8 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 10 min very easy. Run easy (RPE 3–4). 6 x 20s relaxed strides with 60–90s easy between. Cool down 5–10 min easy. Strides should leave you feeling better, not taxed." },
+    { dayIndex: 2, type: "strength", title: "Strength H (step-ups + calves)", details: "2 rounds: step-ups, split squats, tib raises, calf/soleus raises, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Step-ups: 8–12/side. Split squats: 8–12/side. Tib raises: 12–20. Calf raises: 12–15 straight + 12–15 bent. Dead bugs: 6–10/side. Side plank: 30–45s/side. Smooth reps; no grinding." },
+    { dayIndex: 3, title: "5 x 3 min @ RPE 8", details: "5 x 3 min hard with 2 min easy recoveries.", targetRpeMin: 8, targetRpeMax: 8, estimatedMilesMin: 6, estimatedMilesMax: 7, estimatedTimeMin: 55, estimatedTimeMax: 65, description: "Warm up 15 min easy + 3–4 x 20s strides. Main set: 5 x 3 min hard (RPE 8) with 2 min easy jog. Cool down 10 min easy. Effort should be repeatable—if rep 3 feels like a sprint, you started too fast." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Easy aerobic (RPE 3–4). Keep this one boring and restorative. If you want structure: run the first half RPE 3, second half RPE 4 (still conversational)." },
+    { dayIndex: 6, type: "strength", title: "Strength I (single-leg balance)", details: "2 rounds: single-leg RDL, lateral lunge, tib raises, calf/soleus raises, bird dog, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 20, estimatedTimeMax: 30, description: "2 rounds (RPE 5–6). Single-leg RDL: 8–10/side. Lateral lunge: 6–10/side. Tib raises: 12–20. Calf raises: 12–15 straight + 12–15 bent. Bird dog: 6–10/side. Side plank: 30–45s/side. Add a brief single-leg balance hold (20–30s/side) between sets if time." },
+    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 7, estimatedMilesMax: 8, estimatedTimeMin: 65, estimatedTimeMax: 70, description: "65 min steady (RPE 4–5). First 10 min easy. If you feel great, you can let effort drift slightly up in the middle, but finish relaxed. Cool down built into the last 5–10 min very easy." },
   ],
   7: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "4 x 5 min strong threshold", details: "4 x 5 min strong threshold with 2 min easy recoveries.", targetRpeMin: 7, targetRpeMax: 8 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 10 min very easy. Run easy (RPE 3–4). 6 x 20s relaxed strides with full recovery (60–90s easy). Cool down 5–10 min easy. If you’re mentally tired, skip strides—keep the run easy." },
+    { dayIndex: 2, type: "strength", title: "Strength J (lighter tune-up)", details: "2 rounds: calf/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank (lighter).", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 18, estimatedTimeMax: 28, description: "2 rounds (RPE 5). Keep it snappy and low fatigue: reduce reps by ~20% (e.g., 6–8/side for split squats and RDLs) and focus on clean movement. Goal is durability, not soreness." },
+    { dayIndex: 3, title: "4 x 5 min strong threshold", details: "4 x 5 min strong threshold with 2 min easy recoveries.", targetRpeMin: 7, targetRpeMax: 8, estimatedMilesMin: 6.5, estimatedMilesMax: 7, estimatedTimeMin: 55, estimatedTimeMax: 65, description: "Warm up 12–15 min easy + 3 x 20s strides. Main set: 4 x 5 min at strong threshold (RPE 7–8) with 2 min easy jog. Cool down 10–12 min easy. Aim for ‘comfortably hard’—breathing deep but controlled." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Easy recovery (RPE 3–4). Keep it light and unstructured. If you have a watch, hide pace and just watch time. Soft surface preferred." },
+    { dayIndex: 6, type: "strength", title: "Strength K (glute/core emphasis)", details: "2 rounds: glute bridge march, step-ups, tib raises, calf/soleus raises, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 18, estimatedTimeMax: 28, description: "2 rounds (RPE 5–6). Glute bridge march: 10–14/side. Step-ups: 8–10/side. Tib raises: 12–20. Calf raises: 12–15 straight + 12–15 bent. Dead bugs: 6–10/side. Side plank: 30–45s/side. Keep core braced; move slow." },
+    { dayIndex: 7, title: "65 min long", details: "Steady long run for 65 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 7, estimatedMilesMax: 8, estimatedTimeMin: 65, estimatedTimeMax: 70, description: "65 min steady (RPE 4–5). Stay relaxed and finish feeling like you could do another 10–15 min if needed. If weather/roads are harsh, swap to flatter terrain and keep effort constant." },
   ],
   8: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "3 x 1 mile @ 5K pace", details: "3 x 1 mile at 5K pace with full easy recoveries.", targetRpeMin: 8, targetRpeMax: 9 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Warm up 10 min very easy. Run easy (RPE 3–4). Finish with 6 x 20s relaxed strides w/ full recovery. Cool down 5–10 min easy. Keep everything snappy but low stress." },
+    { dayIndex: 2, type: "strength", title: "Strength L (maintenance)", details: "2 rounds: calf/soleus raises, tib raises, split squats, single-leg RDL, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 18, estimatedTimeMax: 28, description: "2 rounds (RPE 5–6). This is maintenance as workouts sharpen: keep reps moderate, stop early, no soreness chasing. If legs are tired, do 1 round only." },
+    { dayIndex: 3, title: "3 x 1 mile @ 5K pace", details: "3 x 1 mile at 5K pace with full easy recoveries.", targetRpeMin: 8, targetRpeMax: 9, estimatedMilesMin: 6, estimatedMilesMax: 7, estimatedTimeMin: 55, estimatedTimeMax: 65, description: "Warm up 15 min easy + 4 x 20s strides. Main set: 3 x 1 mile at ~5K effort (RPE 8–9) with full easy recovery (3–5 min easy jog/walk). Cool down 10–15 min easy. Goal: controlled hard—finish each rep feeling like you could do one more." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Easy recovery (RPE 3–4). Keep it comfortable. If you feel any lingering sharpness from Wednesday, reduce duration by 10 min." },
+    { dayIndex: 6, type: "strength", title: "Strength M (core + calves)", details: "2 rounds: tib raises, calf/soleus raises, dead bugs, side plank, bird dog, glute bridge march.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 15, estimatedTimeMax: 25, description: "2 rounds (RPE 5). Keep it short and supportive this close to peak workouts. Focus on calves/tibs and core control; skip anything that makes you sore." },
+    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 6.5, estimatedMilesMax: 7.5, estimatedTimeMin: 60, estimatedTimeMax: 65, description: "60 min steady (RPE 4–5). Keep it smooth and relaxed. If you want a tiny ‘finish’ without strain: last 5 min at RPE 5 (still controlled)." },
   ],
   9: [
-    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s" },
-    { dayIndex: 3, title: "8 x 400 slightly faster than 5K pace", details: "8 x 400 m slightly faster than 5K pace with easy jog recoveries.", targetRpeMin: 8, targetRpeMax: 9 },
-    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5 },
+    { dayIndex: 1, title: "Easy + strides", details: "Easy run + 6 x 20s relaxed strides.", targetRpeMin: 3, targetRpeMax: 4, strides: "6x20s", estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Warm up 10 min very easy. Run easy (RPE 3–4). 6 x 20s relaxed strides with full recovery. Cool down 5–10 min easy. Keep it playful and light." },
+    { dayIndex: 2, type: "strength", title: "Strength N (taper maintenance)", details: "1–2 rounds: calf/soleus raises, tib raises, split squats, dead bugs, side plank.", targetRpeMin: 5, targetRpeMax: 6, estimatedTimeMin: 12, estimatedTimeMax: 22, description: "Taper maintenance (RPE 5). Do 1 round if you’re even slightly fatigued; 2 rounds only if you feel fresh. Keep split squats light and controlled; avoid soreness." },
+    { dayIndex: 3, title: "8 x 400 slightly faster than 5K pace", details: "8 x 400 m slightly faster than 5K pace with easy jog recoveries.", targetRpeMin: 8, targetRpeMax: 9, estimatedMilesMin: 5.5, estimatedMilesMax: 6.5, estimatedTimeMin: 50, estimatedTimeMax: 60, description: "Warm up 15 min easy + drills/strides (3–4 x 20s). Main set: 8 x 400 m ‘fast but smooth’ (RPE 8–9) with 200–400 m very easy jog (or ~90–120s) between. Cool down 10–15 min easy. Keep the 400s consistent; stop at 6–7 reps if form degrades." },
+    { dayIndex: 5, title: "Easy", details: "Easy aerobic run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 4.5, estimatedMilesMax: 5.5, estimatedTimeMin: 45, estimatedTimeMax: 55, description: "Easy (RPE 3–4). This is your absorption run. Keep it gentle, preferably on softer ground. If you’re carrying fatigue, shorten rather than speed up." },
+    { dayIndex: 7, title: "60 min long", details: "Steady long run for 60 minutes.", targetRpeMin: 4, targetRpeMax: 5, estimatedMilesMin: 6.5, estimatedMilesMax: 7.5, estimatedTimeMin: 60, estimatedTimeMax: 65, description: "60 min steady (RPE 4–5). Keep effort even; avoid turning hills into a workout. Finish relaxed and ready for next week’s taper." },
   ],
   10: [
-    { dayIndex: 1, title: "Taper: 4 x 400 @ race pace", details: "Early week taper workout: 4 x 400 m at race pace.", targetRpeMin: 7, targetRpeMax: 8 },
-    { dayIndex: 3, title: "Easy", details: "Easy run during taper.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 5, title: "Easy", details: "Second easy taper run.", targetRpeMin: 3, targetRpeMax: 4 },
-    { dayIndex: 6, title: "Race day May 9", details: "Race day. Warm up, race hard, cool down.", targetRpeMin: 9, targetRpeMax: 10 },
+    { dayIndex: 1, title: "Taper: 4 x 400 @ race pace", details: "Early week taper workout: 4 x 400 m at race pace.", targetRpeMin: 7, targetRpeMax: 8, estimatedMilesMin: 4, estimatedMilesMax: 5, estimatedTimeMin: 40, estimatedTimeMax: 50, description: "Warm up 12–15 min easy + 3 x 20s strides. Main set: 4 x 400 m at ~5K race pace (RPE 7–8) with generous easy jog recoveries (200–400 m or ~90–120s). Cool down 10 min easy. Purpose: feel sharp, not tired—leave with energy." },
+    { dayIndex: 2, type: "strength", title: "Strength O (very light primer)", details: "1 round: calf/soleus raises, tib raises, dead bugs, side plank (optional).", targetRpeMin: 4, targetRpeMax: 5, estimatedTimeMin: 8, estimatedTimeMax: 15, description: "Optional primer only (RPE 4–5). Keep it easy and brief—no soreness. 1 set each: calves (straight + bent knee), tib raises, dead bugs, side plank. Skip entirely if you feel any fatigue." },
+    { dayIndex: 3, title: "Easy", details: "Easy run during taper.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 4, estimatedMilesMax: 5, estimatedTimeMin: 40, estimatedTimeMax: 50, description: "Easy (RPE 3–4). Keep it relaxed and short-stride. Optional: 4 x 15–20s strides near the end if you want to stay snappy. Don’t chase pace." },
+    { dayIndex: 5, title: "Easy", details: "Second easy taper run.", targetRpeMin: 3, targetRpeMax: 4, estimatedMilesMin: 3.5, estimatedMilesMax: 4.5, estimatedTimeMin: 35, estimatedTimeMax: 45, description: "Easy shakeout (RPE 2–3). Keep it very relaxed. Optional: 3–4 x 10–15s strides if you like, otherwise just cruise. Finish feeling fresh." },
+    { dayIndex: 6, title: "Race day May 9", details: "Race day. Warm up, race hard, cool down.", targetRpeMin: 9, targetRpeMax: 10, estimatedMilesMin: 4.5, estimatedMilesMax: 6, estimatedTimeMin: 50, estimatedTimeMax: 65, description: "Warm up 15–20 min easy + 4 x 20s strides + 2–3 min easy. Race: commit to a strong, even effort (start controlled; build through the middle; push the final 1K). Cool down 10–15 min easy. After: easy walk, light stretching, note how shins/calves feel." },
   ],
 };
 
-export const PLAN_ITEMS: PlanItem[] = Array.from({ length: 10 }, (_, idx) => idx + 1).flatMap((week) => {
-  const runItems = (runByWeek[week] ?? []).map((item, runIndex) => ({
-    id: `w${week}-run-${runIndex + 1}`,
-    week,
-    dayIndex: item.dayIndex,
-    type: "run" as const,
-    title: item.title,
-    details: item.details,
-    targetRpeMin: item.targetRpeMin,
-    targetRpeMax: item.targetRpeMax,
-    strides: item.strides,
-  }));
-
-  const strengthItems: PlanItem[] = [
-    {
-      id: `w${week}-strength-1`,
-      week,
-      dayIndex: 2,
-      type: "strength",
-      title: "Strength A",
-      details: strengthDetails,
-      targetRpeMin: 5,
-      targetRpeMax: 6,
-    },
-    {
-      id: `w${week}-strength-2`,
-      week,
-      dayIndex: 6,
-      type: "strength",
-      title: "Strength B",
-      details: strengthDetails,
-      targetRpeMin: 5,
-      targetRpeMax: 6,
-    },
-  ];
-
-  return [...runItems, ...strengthItems].sort((a, b) => a.dayIndex - b.dayIndex);
-});
+export const PLAN_ITEMS: PlanItem[] = Object.entries(PLAN_BY_WEEK)
+  .flatMap(([weekKey, items]) => {
+    const week = Number(weekKey);
+    return items.map((item, index) => {
+      const type = item.type ?? (item.title.startsWith("Strength") ? "strength" : "run");
+      return {
+        ...item,
+        id: `w${week}-${type}-${index + 1}`,
+        week,
+        type,
+      };
+    });
+  })
+  .sort((a, b) => (a.week - b.week) || (a.dayIndex - b.dayIndex));
 
 export const getPlanItemById = (id: string) => PLAN_ITEMS.find((item) => item.id === id);

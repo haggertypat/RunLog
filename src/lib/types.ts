@@ -7,9 +7,14 @@ export type PlanItem = {
   type: PlanItemType;
   title: string;
   details: string;
+  description?: string;
   targetRpeMin?: number;
   targetRpeMax?: number;
   strides?: string;
+  estimatedMilesMin?: number;
+  estimatedMilesMax?: number;
+  estimatedTimeMin?: number;
+  estimatedTimeMax?: number;
 };
 
 export type LogEntry = {
