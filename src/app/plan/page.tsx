@@ -12,6 +12,7 @@ const WEEKS = 10;
 const DAYS = 7;
 
 type ViewMode = "list" | "calendar";
+const PLAN_VIEW_MODE_KEY = "runlog-plan-view-mode";
 
 function getDateFor(week: number, dayIndex: number): Date {
   const d = new Date(WEEK_ONE_START);
@@ -61,6 +62,17 @@ export default function PlanPage() {
   useEffect(() => {
     setLogs(loadLogs());
   }, []);
+
+  useEffect(() => {
+    const savedViewMode = window.localStorage.getItem(PLAN_VIEW_MODE_KEY);
+    if (savedViewMode === "list" || savedViewMode === "calendar") {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(PLAN_VIEW_MODE_KEY, viewMode);
+  }, [viewMode]);
 
   const grid = useMemo(() => {
     const map = new Map<string, typeof PLAN_ITEMS>();
