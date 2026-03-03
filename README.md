@@ -27,6 +27,8 @@ If you have a single georeferenced quadrangle image you want to use as an overla
 ```bash
 NEXT_PUBLIC_USGS_QUAD_IMAGE_URL=/my-quad-image.png
 NEXT_PUBLIC_USGS_QUAD_BOUNDS=south,west,north,east
+# Optional: crop decorative border/collar from the image (top,right,bottom,left as fractions)
+NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=0.06,0.04,0.07,0.05
 ```
 
 Example bounds format:
@@ -36,6 +38,8 @@ NEXT_PUBLIC_USGS_QUAD_BOUNDS=39.70,-105.06,39.78,-104.96
 ```
 
 Then choose **USGS Quad (custom image overlay)** in the map background selector on `/log`.
+
+`NEXT_PUBLIC_USGS_QUAD_BORDER_CROP` is optional and helps when a scanned map has white/printed borders. Example above means crop 6% top, 4% right, 7% bottom, 5% left from the image before overlaying it on the same bounds.
 
 ## Data model
 

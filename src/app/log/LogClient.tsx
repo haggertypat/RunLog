@@ -18,6 +18,37 @@ const GpxMap = dynamic(() => import("@/app/log/GpxMap"), {
 
 type BaseLayerId = "osm" | "cartoLight" | "esriImagery" | "usgsTopo" | "usgsQuad";
 type QuadBounds = [number, number, number, number];
+type QuadBorderCrop = [number, number, number, number];
+
+async function cropQuadImageUrl(imageUrl: string, crop?: QuadBorderCrop | null): Promise<string> {
+  if (!crop) return imageUrl;
+
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+
+  const loadedImage = await new Promise<HTMLImageElement>((resolve, reject) => {
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Unable to load USGS quad image for border crop."));
+    image.src = imageUrl;
+  });
+
+  const [top, right, bottom, left] = crop;
+  const sourceX = Math.round(loadedImage.width * left);
+  const sourceY = Math.round(loadedImage.height * top);
+  const sourceWidth = Math.max(1, Math.round(loadedImage.width * (1 - left - right)));
+  const sourceHeight = Math.max(1, Math.round(loadedImage.height * (1 - top - bottom)));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Unable to crop USGS quad image.");
+
+  context.drawImage(loadedImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+
+  return canvas.toDataURL("image/png");
+}
 
 const MAP_LAYER_OPTIONS: { id: BaseLayerId; label: string }[] = [
   { id: "osm", label: "OpenStreetMap" },
@@ -32,6 +63,15 @@ function parseQuadBounds(value: string | undefined): QuadBounds | null {
   const parts = value.split(",").map((part) => Number(part.trim()));
   if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return null;
   return [parts[0], parts[1], parts[2], parts[3]];
+}
+
+function parseQuadBorderCrop(value: string | undefined): QuadBorderCrop | null {
+  if (!value) return null;
+  const parts = value.split(",").map((part) => Number(part.trim()));
+  if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part) || part < 0 || part >= 1)) return null;
+  const [top, right, bottom, left] = parts;
+  if (top + bottom >= 1 || left + right >= 1) return null;
+  return [top, right, bottom, left];
 }
 
 function formatRange(min?: number, max?: number, unit = "") {
@@ -196,8 +236,10 @@ export default function LogClient() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
+  const [croppedQuadImageUrl, setCroppedQuadImageUrl] = useState<string | null>(null);
+
   const quadOverlay = useMemo(() => {
-    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
+    const imageUrl = croppedQuadImageUrl ?? process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
     const bounds = parseQuadBounds(process.env.NEXT_PUBLIC_USGS_QUAD_BOUNDS);
 
     if (!imageUrl || !bounds) return undefined;
@@ -206,6 +248,35 @@ export default function LogClient() {
       imageUrl,
       bounds,
       opacity: 0.75,
+    };
+  }, [croppedQuadImageUrl]);
+
+
+  useEffect(() => {
+    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
+    const borderCrop = parseQuadBorderCrop(process.env.NEXT_PUBLIC_USGS_QUAD_BORDER_CROP);
+
+    if (!imageUrl || !borderCrop) {
+      setCroppedQuadImageUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    cropQuadImageUrl(imageUrl, borderCrop)
+      .then((url) => {
+        if (!cancelled) {
+          setCroppedQuadImageUrl(url);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCroppedQuadImageUrl(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -425,7 +496,8 @@ export default function LogClient() {
                 {baseLayer === "usgsQuad" && !quadOverlay ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
                     To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
-                    NEXT_PUBLIC_USGS_QUAD_BOUNDS=&quot;south,west,north,east&quot;.
+                    NEXT_PUBLIC_USGS_QUAD_BOUNDS=&quot;south,west,north,east&quot;. Optional:
+                    NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot; (fractions like 0.06).
                   </span>
                 ) : null}
               </>
