@@ -240,7 +240,7 @@ export default function LogClient() {
   const [gpxData, setGpxData] = useState("");
   const [gpxSegments, setGpxSegments] = useState<LatLngTuple[][]>([]);
   const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
-  const [baseLayer, setBaseLayer] = useState<BaseLayerId>("usgsTopo");
+  const [baseLayer, setBaseLayer] = useState<BaseLayerId>("usgsQuad");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
