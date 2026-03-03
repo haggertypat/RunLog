@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getPlanItemById } from "@/lib/plan";
 import { addLog, deleteLog, loadLogs, updateLog } from "@/lib/storage";
@@ -38,6 +38,83 @@ function parseDurationToMinutes(input: string): number | null {
   return hours * 60 + minutes + seconds / 60;
 }
 
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineMiles(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const earthRadiusMiles = 3958.7613;
+  const latDelta = toRadians(b.lat - a.lat);
+  const lonDelta = toRadians(b.lon - a.lon);
+  const latA = toRadians(a.lat);
+  const latB = toRadians(b.lat);
+
+  const h =
+    Math.sin(latDelta / 2) * Math.sin(latDelta / 2) +
+    Math.cos(latA) * Math.cos(latB) * Math.sin(lonDelta / 2) * Math.sin(lonDelta / 2);
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+
+  return earthRadiusMiles * c;
+}
+
+function parseGpxSummary(content: string) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, "application/xml");
+  const parseError = doc.querySelector("parsererror");
+  if (parseError) {
+    throw new Error("Invalid GPX file.");
+  }
+
+  const segmentElements = Array.from(doc.getElementsByTagName("trkseg"));
+  if (segmentElements.length === 0) {
+    throw new Error("GPX does not contain any track segments.");
+  }
+
+  const segmentPoints = segmentElements
+    .map((segment) =>
+      Array.from(segment.getElementsByTagName("trkpt"))
+        .map((point) => {
+          const lat = Number(point.getAttribute("lat"));
+          const lon = Number(point.getAttribute("lon"));
+          const timeNode = point.getElementsByTagName("time")[0];
+          const timestamp = timeNode?.textContent ? Date.parse(timeNode.textContent) : Number.NaN;
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+          return {
+            lat,
+            lon,
+            timestamp,
+          };
+        })
+        .filter((point): point is { lat: number; lon: number; timestamp: number } => Boolean(point)),
+    )
+    .filter((segment) => segment.length > 0);
+
+  const totalPointCount = segmentPoints.reduce((count, segment) => count + segment.length, 0);
+  if (totalPointCount < 2) {
+    throw new Error("GPX needs at least 2 track points to calculate distance.");
+  }
+
+  let miles = 0;
+  for (const points of segmentPoints) {
+    for (let index = 1; index < points.length; index += 1) {
+      miles += haversineMiles(points[index - 1], points[index]);
+    }
+  }
+
+  const timestamps = segmentPoints.flat().map((point) => point.timestamp).filter(Number.isFinite);
+  const durationMin =
+    timestamps.length >= 2
+      ? Math.max(0, (Math.max(...timestamps) - Math.min(...timestamps)) / 60000)
+      : null;
+
+  return {
+    distanceMi: miles,
+    durationMin,
+  };
+}
+
 export default function LogClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,8 +129,11 @@ export default function LogClient() {
   const [rpe, setRpe] = useState(String(planItem?.targetRpeMin ?? 5));
   const [surface, setSurface] = useState("");
   const [notes, setNotes] = useState("");
+  const [gpxFileName, setGpxFileName] = useState("");
+  const [gpxData, setGpxData] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const existingLog = useMemo(() => {
@@ -80,6 +160,8 @@ export default function LogClient() {
       setRpe(String(existingLog.rpe));
       setSurface(existingLog.surface);
       setNotes(existingLog.notes);
+      setGpxFileName(existingLog.gpxFileName ?? "");
+      setGpxData(existingLog.gpxData ?? "");
       return;
     }
 
@@ -91,6 +173,8 @@ export default function LogClient() {
     setRpe(String(planItem?.targetRpeMin ?? 5));
     setSurface("");
     setNotes("");
+    setGpxFileName("");
+    setGpxData("");
   }, [existingLog, planItem]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -121,6 +205,8 @@ export default function LogClient() {
       rpe: parsedRpe,
       surface,
       notes,
+      gpxFileName: gpxFileName || undefined,
+      gpxData: gpxData || undefined,
       createdAt: existingLog?.createdAt ?? new Date().toISOString(),
     };
 
@@ -140,6 +226,40 @@ export default function LogClient() {
     deleteLog(existingLog.id);
     setSuccess("Log deleted.");
     refreshLogs();
+  };
+
+  const handleGpxUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setSuccess(null);
+    setImportStatus(null);
+
+    try {
+      const content = await file.text();
+      const summary = parseGpxSummary(content);
+
+      setDistanceMi(summary.distanceMi.toFixed(2));
+      setGpxData(content);
+      setGpxFileName(file.name);
+      if (summary.durationMin != null) {
+        setDurationMin(summary.durationMin.toFixed(1));
+      }
+      setImportStatus(
+        `Imported GPX${summary.durationMin != null ? " distance and duration" : " distance"}. Review before saving.`,
+      );
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Unable to parse GPX file.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const clearGpx = () => {
+    setGpxData("");
+    setGpxFileName("");
+    setImportStatus("Cleared GPX attachment from this entry.");
   };
 
   return (
@@ -178,6 +298,23 @@ export default function LogClient() {
         <h2 className="font-semibold">{existingLog ? "Edit Log" : "New Log Entry"}</h2>
 
         <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm sm:col-span-2">
+            GPX file (autofill distance + duration)
+            <input
+              type="file"
+              accept=".gpx,application/gpx+xml,application/xml,text/xml"
+              className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+              onChange={handleGpxUpload}
+            />
+            {gpxFileName ? (
+              <span className="mt-1 flex items-center gap-2 text-xs text-stone-600 dark:text-stone-300">
+                Stored with entry: {gpxFileName}
+                <button type="button" onClick={clearGpx} className="rounded border border-stone-300 px-2 py-0.5 text-xs dark:border-stone-600">
+                  Remove
+                </button>
+              </span>
+            ) : null}
+          </label>
           <label className="text-sm">
             Date
             <input type="date" className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -216,6 +353,7 @@ export default function LogClient() {
         </div>
 
         {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+        {importStatus ? <p className="text-sm text-blue-700 dark:text-blue-300">{importStatus}</p> : null}
         {success ? <p className="text-sm text-green-700 dark:text-green-400">{success}</p> : null}
 
         <div className="flex gap-2">
