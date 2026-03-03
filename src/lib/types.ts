@@ -28,5 +28,7 @@ export type LogEntry = {
   rpe: number;
   surface: string;
   notes: string;
+  gpxFileName?: string;
+  gpxData?: string;
   createdAt: string;
 };

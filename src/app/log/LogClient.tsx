@@ -122,6 +122,8 @@ export default function LogClient() {
   const [rpe, setRpe] = useState(String(planItem?.targetRpeMin ?? 5));
   const [surface, setSurface] = useState("");
   const [notes, setNotes] = useState("");
+  const [gpxFileName, setGpxFileName] = useState("");
+  const [gpxData, setGpxData] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -151,6 +153,8 @@ export default function LogClient() {
       setRpe(String(existingLog.rpe));
       setSurface(existingLog.surface);
       setNotes(existingLog.notes);
+      setGpxFileName(existingLog.gpxFileName ?? "");
+      setGpxData(existingLog.gpxData ?? "");
       return;
     }
 
@@ -162,6 +166,8 @@ export default function LogClient() {
     setRpe(String(planItem?.targetRpeMin ?? 5));
     setSurface("");
     setNotes("");
+    setGpxFileName("");
+    setGpxData("");
   }, [existingLog, planItem]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -192,6 +198,8 @@ export default function LogClient() {
       rpe: parsedRpe,
       surface,
       notes,
+      gpxFileName: gpxFileName || undefined,
+      gpxData: gpxData || undefined,
       createdAt: existingLog?.createdAt ?? new Date().toISOString(),
     };
 
@@ -226,6 +234,8 @@ export default function LogClient() {
       const summary = parseGpxSummary(content);
 
       setDistanceMi(summary.distanceMi.toFixed(2));
+      setGpxData(content);
+      setGpxFileName(file.name);
       if (summary.durationMin != null) {
         setDurationMin(summary.durationMin.toFixed(1));
       }
@@ -237,6 +247,12 @@ export default function LogClient() {
     } finally {
       event.target.value = "";
     }
+  };
+
+  const clearGpx = () => {
+    setGpxData("");
+    setGpxFileName("");
+    setImportStatus("Cleared GPX attachment from this entry.");
   };
 
   return (
@@ -283,6 +299,14 @@ export default function LogClient() {
               className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
               onChange={handleGpxUpload}
             />
+            {gpxFileName ? (
+              <span className="mt-1 flex items-center gap-2 text-xs text-stone-600 dark:text-stone-300">
+                Stored with entry: {gpxFileName}
+                <button type="button" onClick={clearGpx} className="rounded border border-stone-300 px-2 py-0.5 text-xs dark:border-stone-600">
+                  Remove
+                </button>
+              </span>
+            ) : null}
           </label>
           <label className="text-sm">
             Date

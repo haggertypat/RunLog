@@ -50,6 +50,8 @@ function isLogEntry(value: unknown): value is LogEntry {
     typeof candidate.rpe === "number" &&
     typeof candidate.surface === "string" &&
     typeof candidate.notes === "string" &&
+    (typeof candidate.gpxFileName === "undefined" || typeof candidate.gpxFileName === "string") &&
+    (typeof candidate.gpxData === "undefined" || typeof candidate.gpxData === "string") &&
     typeof candidate.createdAt === "string"
   );
 }
