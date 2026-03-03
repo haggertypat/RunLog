@@ -65,38 +65,45 @@ function parseGpxSummary(content: string) {
     throw new Error("Invalid GPX file.");
   }
 
-  const trkptElements = Array.from(doc.getElementsByTagName("trkpt"));
-  if (trkptElements.length < 2) {
+  const segmentElements = Array.from(doc.getElementsByTagName("trkseg"));
+  if (segmentElements.length === 0) {
+    throw new Error("GPX does not contain any track segments.");
+  }
+
+  const segmentPoints = segmentElements
+    .map((segment) =>
+      Array.from(segment.getElementsByTagName("trkpt"))
+        .map((point) => {
+          const lat = Number(point.getAttribute("lat"));
+          const lon = Number(point.getAttribute("lon"));
+          const timeNode = point.getElementsByTagName("time")[0];
+          const timestamp = timeNode?.textContent ? Date.parse(timeNode.textContent) : Number.NaN;
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+          return {
+            lat,
+            lon,
+            timestamp,
+          };
+        })
+        .filter((point): point is { lat: number; lon: number; timestamp: number } => Boolean(point)),
+    )
+    .filter((segment) => segment.length > 0);
+
+  const totalPointCount = segmentPoints.reduce((count, segment) => count + segment.length, 0);
+  if (totalPointCount < 2) {
     throw new Error("GPX needs at least 2 track points to calculate distance.");
   }
 
-  const points = trkptElements
-    .map((point) => {
-      const lat = Number(point.getAttribute("lat"));
-      const lon = Number(point.getAttribute("lon"));
-      const timeNode = point.getElementsByTagName("time")[0];
-      const timestamp = timeNode?.textContent ? Date.parse(timeNode.textContent) : Number.NaN;
-
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-
-      return {
-        lat,
-        lon,
-        timestamp,
-      };
-    })
-    .filter((point): point is { lat: number; lon: number; timestamp: number } => Boolean(point));
-
-  if (points.length < 2) {
-    throw new Error("GPX file does not contain enough valid coordinates.");
-  }
-
   let miles = 0;
-  for (let index = 1; index < points.length; index += 1) {
-    miles += haversineMiles(points[index - 1], points[index]);
+  for (const points of segmentPoints) {
+    for (let index = 1; index < points.length; index += 1) {
+      miles += haversineMiles(points[index - 1], points[index]);
+    }
   }
 
-  const timestamps = points.map((point) => point.timestamp).filter(Number.isFinite);
+  const timestamps = segmentPoints.flat().map((point) => point.timestamp).filter(Number.isFinite);
   const durationMin =
     timestamps.length >= 2
       ? Math.max(0, (Math.max(...timestamps) - Math.min(...timestamps)) / 60000)
