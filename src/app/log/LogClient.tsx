@@ -82,6 +82,16 @@ function formatRange(min?: number, max?: number, unit = "") {
   return `${typeof min === "number" ? min : max}${unit}`;
 }
 
+function formatDurationValue(durationMin?: number) {
+  if (typeof durationMin !== "number") return "—";
+
+  const roundedMinutes = Math.floor(durationMin);
+  const seconds = Math.round((durationMin - roundedMinutes) * 60);
+
+  if (seconds === 0) return `${roundedMinutes} min`;
+  return `${roundedMinutes}m ${seconds}s`;
+}
+
 function parseDurationToMinutes(input: string): number | null {
   const value = input.trim();
   if (!value) return null;
@@ -235,6 +245,7 @@ export default function LogClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isEditing, setIsEditing] = useState(!planItem);
 
   const [croppedQuadImageUrl, setCroppedQuadImageUrl] = useState<string | null>(null);
 
@@ -336,6 +347,10 @@ export default function LogClient() {
     setElevationProfile([]);
   }, [existingLog, planItem]);
 
+  useEffect(() => {
+    setIsEditing(!existingLog);
+  }, [existingLog]);
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -372,6 +387,7 @@ export default function LogClient() {
     if (existingLog) {
       updateLog(entry);
       setSuccess("Updated log.");
+      setIsEditing(false);
     } else {
       addLog(entry);
       setSuccess("Saved log entry.");
@@ -458,7 +474,107 @@ export default function LogClient() {
         className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm dark:border-stone-700 dark:bg-stone-800"
         onSubmit={handleSubmit}
       >
-        <h2 className="font-semibold">{existingLog ? "Edit Log" : "New Log Entry"}</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-semibold">{existingLog ? (isEditing ? "Edit Log" : "Log") : "New Log"}</h2>
+          {existingLog && !isEditing ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setImportStatus(null);
+                setSuccess(null);
+                setIsEditing(true);
+              }}
+              className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200"
+            >
+              Edit log
+            </button>
+          ) : null}
+        </div>
+
+        {existingLog && !isEditing ? (
+          <>
+            {gpxSegments.length ? (
+                <>
+                  <label className="block text-sm">
+                    Map background
+                    <select
+                      className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                      value={baseLayer}
+                      onChange={(e) => setBaseLayer(e.target.value as BaseLayerId)}
+                    >
+                      {MAP_LAYER_OPTIONS.map((layer) => (
+                        <option key={layer.id} value={layer.id}>
+                          {layer.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                  {/* <ElevationChart profile={elevationProfile} /> */}
+                </>
+              ) : null}
+
+
+            <dl className="grid gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-stone-700 dark:bg-stone-900/40 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Date</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.date}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Week</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.week}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Type</dt>
+                <dd className="font-medium capitalize text-stone-900 dark:text-stone-100">{existingLog.type}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">RPE</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.rpe}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Distance</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">
+                  {typeof existingLog.distanceMi === "number" ? `${existingLog.distanceMi} mi` : "—"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Duration</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">
+                  {formatDurationValue(existingLog.durationMin)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Surface</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.surface || "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Notes</dt>
+                <dd className="whitespace-pre-wrap font-medium text-stone-900 dark:text-stone-100">{existingLog.notes || "—"}</dd>
+              </div>
+              {existingLog.gpxFileName ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">GPX file</dt>
+                  <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.gpxFileName}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200"
+                onClick={() => router.push("/plan")}
+              >
+                Back to plan
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-sm sm:col-span-2">
@@ -492,7 +608,7 @@ export default function LogClient() {
                   ))}
                 </select>
                 <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
-                <ElevationChart profile={elevationProfile} />
+                {/* <ElevationChart profile={elevationProfile} /> */}
                 {baseLayer === "usgsQuad" && !quadOverlay ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
                     To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
@@ -551,9 +667,18 @@ export default function LogClient() {
           <button
             type="button"
             className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200"
-            onClick={() => router.push("/plan")}
+            onClick={() => {
+              if (existingLog) {
+                setError(null);
+                setImportStatus(null);
+                setSuccess(null);
+                setIsEditing(false);
+                return;
+              }
+              router.push("/plan");
+            }}
           >
-            Cancel
+            {existingLog ? "Done" : "Cancel"}
           </button>
           {existingLog ? (
             <button type="button" className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 dark:border-red-800 dark:text-red-400" onClick={handleDelete}>
@@ -561,6 +686,8 @@ export default function LogClient() {
             </button>
           ) : null}
         </div>
+          </>
+        )}
       </form>
     </section>
   );
