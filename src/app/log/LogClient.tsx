@@ -20,36 +20,6 @@ type BaseLayerId = "osm" | "cartoLight" | "esriImagery" | "usgsTopo" | "usgsQuad
 type QuadBounds = [number, number, number, number];
 type QuadBorderCrop = [number, number, number, number];
 
-async function cropQuadImageUrl(imageUrl: string, crop?: QuadBorderCrop | null): Promise<string> {
-  if (!crop) return imageUrl;
-
-  const image = new Image();
-  image.crossOrigin = "anonymous";
-
-  const loadedImage = await new Promise<HTMLImageElement>((resolve, reject) => {
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Unable to load USGS quad image for border crop."));
-    image.src = imageUrl;
-  });
-
-  const [top, right, bottom, left] = crop;
-  const sourceX = Math.round(loadedImage.width * left);
-  const sourceY = Math.round(loadedImage.height * top);
-  const sourceWidth = Math.max(1, Math.round(loadedImage.width * (1 - left - right)));
-  const sourceHeight = Math.max(1, Math.round(loadedImage.height * (1 - top - bottom)));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = sourceWidth;
-  canvas.height = sourceHeight;
-
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Unable to crop USGS quad image.");
-
-  context.drawImage(loadedImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
-
-  return canvas.toDataURL("image/png");
-}
-
 const MAP_LAYER_OPTIONS: { id: BaseLayerId; label: string }[] = [
   { id: "osm", label: "OpenStreetMap" },
   { id: "cartoLight", label: "CARTO Positron" },
@@ -72,6 +42,16 @@ function parseQuadBorderCrop(value: string | undefined): QuadBorderCrop | null {
   const [top, right, bottom, left] = parts;
   if (top + bottom >= 1 || left + right >= 1) return null;
   return [top, right, bottom, left];
+}
+
+function applyQuadBorderCrop(bounds: QuadBounds, crop?: QuadBorderCrop | null): QuadBounds {
+  if (!crop) return bounds;
+  const [south, west, north, east] = bounds;
+  const [top, right, bottom, left] = crop;
+  const latSpan = north - south;
+  const lonSpan = east - west;
+
+  return [south + latSpan * bottom, west + lonSpan * left, north - latSpan * top, east - lonSpan * right];
 }
 
 function formatRange(min?: number, max?: number, unit = "") {
@@ -236,47 +216,17 @@ export default function LogClient() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
-  const [croppedQuadImageUrl, setCroppedQuadImageUrl] = useState<string | null>(null);
-
   const quadOverlay = useMemo(() => {
-    const imageUrl = croppedQuadImageUrl ?? process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
+    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
     const bounds = parseQuadBounds(process.env.NEXT_PUBLIC_USGS_QUAD_BOUNDS);
+    const borderCrop = parseQuadBorderCrop(process.env.NEXT_PUBLIC_USGS_QUAD_BORDER_CROP);
 
     if (!imageUrl || !bounds) return undefined;
 
     return {
       imageUrl,
-      bounds,
+      bounds: applyQuadBorderCrop(bounds, borderCrop),
       opacity: 0.75,
-    };
-  }, [croppedQuadImageUrl]);
-
-
-  useEffect(() => {
-    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
-    const borderCrop = parseQuadBorderCrop(process.env.NEXT_PUBLIC_USGS_QUAD_BORDER_CROP);
-
-    if (!imageUrl || !borderCrop) {
-      setCroppedQuadImageUrl(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    cropQuadImageUrl(imageUrl, borderCrop)
-      .then((url) => {
-        if (!cancelled) {
-          setCroppedQuadImageUrl(url);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCroppedQuadImageUrl(null);
-        }
-      });
-
-    return () => {
-      cancelled = true;
     };
   }, []);
 
