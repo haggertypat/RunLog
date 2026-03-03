@@ -1,18 +1,33 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 type LatLngTuple = [number, number];
+type LatLngBoundsTuple = [number, number, number, number];
+
+export type BaseLayerId = "osm" | "cartoLight" | "esriImagery" | "usgsTopo" | "usgsQuad";
+
+export type QuadOverlay = {
+  imageUrl: string;
+  bounds: LatLngBoundsTuple;
+  opacity?: number;
+};
 
 type GpxMapProps = {
   segments: LatLngTuple[][];
+  baseLayer: BaseLayerId;
+  quadOverlay?: QuadOverlay;
 };
 
 type LeafletNamespace = {
   map: (element: HTMLElement) => LeafletMap;
-  tileLayer: (url: string, options: { attribution: string }) => { addTo: (map: LeafletMap) => void };
+  tileLayer: (
+    url: string,
+    options: { attribution: string; maxZoom?: number },
+  ) => { addTo: (map: LeafletMap) => void };
   polyline: (positions: LatLngTuple[], options: { color: string; weight: number }) => { addTo: (map: LeafletMap) => void };
-  latLngBounds: (positions: LatLngTuple[]) => unknown;
+  latLngBounds: (positions: LatLngTuple[] | [LatLngTuple, LatLngTuple]) => unknown;
+  imageOverlay: (imageUrl: string, bounds: [LatLngTuple, LatLngTuple], options: { opacity: number }) => { addTo: (map: LeafletMap) => void };
 };
 
 type LeafletMap = {
@@ -28,6 +43,35 @@ declare global {
 
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+
+const BASE_LAYER_CONFIG: Record<BaseLayerId, { url: string; attribution: string; maxZoom?: number }> = {
+  osm: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  },
+  cartoLight: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 20,
+  },
+  esriImagery: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri",
+    maxZoom: 19,
+  },
+  usgsTopo: {
+    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",
+    attribution: "USGS National Map",
+    maxZoom: 16,
+  },
+  usgsQuad: {
+    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",
+    attribution: "USGS National Map",
+    maxZoom: 16,
+  },
+};
 
 async function ensureLeaflet() {
   if (typeof window === "undefined") return;
@@ -46,8 +90,8 @@ async function ensureLeaflet() {
   await new Promise<void>((resolve, reject) => {
     const existing = document.querySelector(`script[data-leaflet-js=\"true\"]`) as HTMLScriptElement | null;
     if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Failed to load Leaflet.")));
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Failed to load Leaflet.")), { once: true });
       return;
     }
 
@@ -61,24 +105,34 @@ async function ensureLeaflet() {
   });
 }
 
-export default function GpxMap({ segments }: GpxMapProps) {
+export default function GpxMap({ segments, baseLayer, quadOverlay }: GpxMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const layerConfig = useMemo(() => BASE_LAYER_CONFIG[baseLayer], [baseLayer]);
 
   useEffect(() => {
     if (!mapRef.current || !segments.length) return;
 
     let map: LeafletMap | null = null;
+    let cancelled = false;
 
     const renderMap = async () => {
       await ensureLeaflet();
-
-      if (!window.L || !mapRef.current) return;
+      if (cancelled || !window.L || !mapRef.current) return;
 
       const routePoints = segments.flat();
       map = window.L.map(mapRef.current);
-      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+
+      window.L.tileLayer(layerConfig.url, {
+        attribution: layerConfig.attribution,
+        maxZoom: layerConfig.maxZoom,
       }).addTo(map);
+
+      if (baseLayer === "usgsQuad" && quadOverlay) {
+        const [south, west, north, east] = quadOverlay.bounds;
+        window.L.imageOverlay(quadOverlay.imageUrl, [[south, west], [north, east]], {
+          opacity: quadOverlay.opacity ?? 0.75,
+        }).addTo(map);
+      }
 
       segments.forEach((segment) => {
         window.L?.polyline(segment, {
@@ -96,9 +150,10 @@ export default function GpxMap({ segments }: GpxMapProps) {
     renderMap();
 
     return () => {
+      cancelled = true;
       map?.remove();
     };
-  }, [segments]);
+  }, [segments, layerConfig, baseLayer, quadOverlay]);
 
   return <div ref={mapRef} className="mt-2 h-72 w-full rounded border border-stone-300 dark:border-stone-600" />;
 }

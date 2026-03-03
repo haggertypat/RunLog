@@ -14,6 +14,24 @@ const GpxMap = dynamic(() => import("@/app/log/GpxMap"), {
   ssr: false,
 });
 
+type BaseLayerId = "osm" | "cartoLight" | "esriImagery" | "usgsTopo" | "usgsQuad";
+type QuadBounds = [number, number, number, number];
+
+const MAP_LAYER_OPTIONS: { id: BaseLayerId; label: string }[] = [
+  { id: "osm", label: "OpenStreetMap" },
+  { id: "cartoLight", label: "CARTO Positron" },
+  { id: "esriImagery", label: "Esri Satellite" },
+  { id: "usgsTopo", label: "USGS Topo" },
+  { id: "usgsQuad", label: "USGS Quad (custom image overlay)" },
+];
+
+function parseQuadBounds(value: string | undefined): QuadBounds | null {
+  if (!value) return null;
+  const parts = value.split(",").map((part) => Number(part.trim()));
+  if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return null;
+  return [parts[0], parts[1], parts[2], parts[3]];
+}
+
 function formatRange(min?: number, max?: number, unit = "") {
   if (typeof min !== "number" && typeof max !== "number") return null;
   if (typeof min === "number" && typeof max === "number") {
@@ -142,10 +160,24 @@ export default function LogClient() {
   const [gpxFileName, setGpxFileName] = useState("");
   const [gpxData, setGpxData] = useState("");
   const [gpxSegments, setGpxSegments] = useState<LatLngTuple[][]>([]);
+  const [baseLayer, setBaseLayer] = useState<BaseLayerId>("usgsTopo");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+
+  const quadOverlay = useMemo(() => {
+    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
+    const bounds = parseQuadBounds(process.env.NEXT_PUBLIC_USGS_QUAD_BOUNDS);
+
+    if (!imageUrl || !bounds) return undefined;
+
+    return {
+      imageUrl,
+      bounds,
+      opacity: 0.75,
+    };
+  }, []);
 
   const existingLog = useMemo(() => {
     if (!planItem) return null;
@@ -338,7 +370,29 @@ export default function LogClient() {
                 </button>
               </span>
             ) : null}
-            {gpxSegments.length ? <GpxMap segments={gpxSegments} /> : null}
+            {gpxSegments.length ? (
+              <>
+                <span className="mt-2 block text-xs text-stone-600 dark:text-stone-300">Map background</span>
+                <select
+                  className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                  value={baseLayer}
+                  onChange={(e) => setBaseLayer(e.target.value as BaseLayerId)}
+                >
+                  {MAP_LAYER_OPTIONS.map((layer) => (
+                    <option key={layer.id} value={layer.id}>
+                      {layer.label}
+                    </option>
+                  ))}
+                </select>
+                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                {baseLayer === "usgsQuad" && !quadOverlay ? (
+                  <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
+                    To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
+                    NEXT_PUBLIC_USGS_QUAD_BOUNDS=&quot;south,west,north,east&quot;.
+                  </span>
+                ) : null}
+              </>
+            ) : null}
           </label>
           <label className="text-sm">
             Date
