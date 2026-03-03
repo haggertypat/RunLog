@@ -6,6 +6,13 @@ import { getPlanItemById } from "@/lib/plan";
 import { addLog, deleteLog, loadLogs, updateLog } from "@/lib/storage";
 import { LogEntry, PlanItemType } from "@/lib/types";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+type LatLngTuple = [number, number];
+
+const GpxMap = dynamic(() => import("@/app/log/GpxMap"), {
+  ssr: false,
+});
 
 function formatRange(min?: number, max?: number, unit = "") {
   if (typeof min !== "number" && typeof max !== "number") return null;
@@ -109,9 +116,12 @@ function parseGpxSummary(content: string) {
       ? Math.max(0, (Math.max(...timestamps) - Math.min(...timestamps)) / 60000)
       : null;
 
+  const segments = segmentPoints.map((points) => points.map((point) => [point.lat, point.lon] as LatLngTuple));
+
   return {
     distanceMi: miles,
     durationMin,
+    segments,
   };
 }
 
@@ -131,6 +141,7 @@ export default function LogClient() {
   const [notes, setNotes] = useState("");
   const [gpxFileName, setGpxFileName] = useState("");
   const [gpxData, setGpxData] = useState("");
+  const [gpxSegments, setGpxSegments] = useState<LatLngTuple[][]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -162,6 +173,16 @@ export default function LogClient() {
       setNotes(existingLog.notes);
       setGpxFileName(existingLog.gpxFileName ?? "");
       setGpxData(existingLog.gpxData ?? "");
+      if (existingLog.gpxData) {
+        try {
+          const summary = parseGpxSummary(existingLog.gpxData);
+          setGpxSegments(summary.segments);
+        } catch {
+          setGpxSegments([]);
+        }
+      } else {
+        setGpxSegments([]);
+      }
       return;
     }
 
@@ -175,6 +196,7 @@ export default function LogClient() {
     setNotes("");
     setGpxFileName("");
     setGpxData("");
+    setGpxSegments([]);
   }, [existingLog, planItem]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -243,6 +265,7 @@ export default function LogClient() {
       setDistanceMi(summary.distanceMi.toFixed(2));
       setGpxData(content);
       setGpxFileName(file.name);
+      setGpxSegments(summary.segments);
       if (summary.durationMin != null) {
         setDurationMin(summary.durationMin.toFixed(1));
       }
@@ -259,6 +282,7 @@ export default function LogClient() {
   const clearGpx = () => {
     setGpxData("");
     setGpxFileName("");
+    setGpxSegments([]);
     setImportStatus("Cleared GPX attachment from this entry.");
   };
 
@@ -314,6 +338,7 @@ export default function LogClient() {
                 </button>
               </span>
             ) : null}
+            {gpxSegments.length ? <GpxMap segments={gpxSegments} /> : null}
           </label>
           <label className="text-sm">
             Date
