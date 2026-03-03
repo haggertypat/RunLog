@@ -475,7 +475,7 @@ export default function LogClient() {
         onSubmit={handleSubmit}
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="font-semibold">{existingLog ? (isEditing ? "Edit Log" : "Log Entry") : "New Log Entry"}</h2>
+          <h2 className="font-semibold">{existingLog ? (isEditing ? "Edit Log" : "Log") : "New Log"}</h2>
           {existingLog && !isEditing ? (
             <button
               type="button"
@@ -494,6 +494,28 @@ export default function LogClient() {
 
         {existingLog && !isEditing ? (
           <>
+            {gpxSegments.length ? (
+                <>
+                  <label className="block text-sm">
+                    Map background
+                    <select
+                      className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                      value={baseLayer}
+                      onChange={(e) => setBaseLayer(e.target.value as BaseLayerId)}
+                    >
+                      {MAP_LAYER_OPTIONS.map((layer) => (
+                        <option key={layer.id} value={layer.id}>
+                          {layer.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                  {/* <ElevationChart profile={elevationProfile} /> */}
+                </>
+              ) : null}
+
+
             <dl className="grid gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-stone-700 dark:bg-stone-900/40 sm:grid-cols-2">
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Date</dt>
@@ -539,26 +561,7 @@ export default function LogClient() {
               ) : null}
             </dl>
 
-            {gpxSegments.length ? (
-              <>
-                <label className="block text-sm">
-                  Map background
-                  <select
-                    className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
-                    value={baseLayer}
-                    onChange={(e) => setBaseLayer(e.target.value as BaseLayerId)}
-                  >
-                    {MAP_LAYER_OPTIONS.map((layer) => (
-                      <option key={layer.id} value={layer.id}>
-                        {layer.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
-                <ElevationChart profile={elevationProfile} />
-              </>
-            ) : null}
+            
 
             <div className="flex gap-2">
               <button
@@ -605,7 +608,7 @@ export default function LogClient() {
                   ))}
                 </select>
                 <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
-                <ElevationChart profile={elevationProfile} />
+                {/* <ElevationChart profile={elevationProfile} /> */}
                 {baseLayer === "usgsQuad" && !quadOverlay ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
                     To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
