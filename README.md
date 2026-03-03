@@ -39,7 +39,7 @@ NEXT_PUBLIC_USGS_QUAD_BOUNDS=39.70,-105.06,39.78,-104.96
 
 Then choose **USGS Quad (custom image overlay)** in the map background selector on `/log`.
 
-`NEXT_PUBLIC_USGS_QUAD_BORDER_CROP` is optional and helps when a scanned map has white/printed borders. Example above means crop 6% top, 4% right, 7% bottom, 5% left before fitting bounds.
+`NEXT_PUBLIC_USGS_QUAD_BORDER_CROP` is optional and helps when a scanned map has white/printed borders. Example above means crop 6% top, 4% right, 7% bottom, 5% left from the image before overlaying it on the same bounds.
 
 ## Data model
 
