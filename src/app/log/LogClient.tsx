@@ -7,8 +7,10 @@ import { addLog, deleteLog, loadLogs, updateLog } from "@/lib/storage";
 import { LogEntry, PlanItemType } from "@/lib/types";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import ElevationChart from "@/app/log/ElevationChart";
 
 type LatLngTuple = [number, number];
+type ElevationPoint = { distanceMi: number; elevationFt: number };
 
 const GpxMap = dynamic(() => import("@/app/log/GpxMap"), {
   ssr: false,
@@ -82,6 +84,10 @@ function haversineMiles(a: { lat: number; lon: number }, b: { lat: number; lon: 
   return earthRadiusMiles * c;
 }
 
+function metersToFeet(meters: number) {
+  return meters * 3.28084;
+}
+
 function parseGpxSummary(content: string) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(content, "application/xml");
@@ -102,7 +108,9 @@ function parseGpxSummary(content: string) {
           const lat = Number(point.getAttribute("lat"));
           const lon = Number(point.getAttribute("lon"));
           const timeNode = point.getElementsByTagName("time")[0];
+          const eleNode = point.getElementsByTagName("ele")[0];
           const timestamp = timeNode?.textContent ? Date.parse(timeNode.textContent) : Number.NaN;
+          const elevationM = eleNode?.textContent ? Number(eleNode.textContent) : Number.NaN;
 
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
 
@@ -110,9 +118,10 @@ function parseGpxSummary(content: string) {
             lat,
             lon,
             timestamp,
+            elevationM,
           };
         })
-        .filter((point): point is { lat: number; lon: number; timestamp: number } => Boolean(point)),
+        .filter((point): point is { lat: number; lon: number; timestamp: number; elevationM: number } => Boolean(point)),
     )
     .filter((segment) => segment.length > 0);
 
@@ -136,10 +145,30 @@ function parseGpxSummary(content: string) {
 
   const segments = segmentPoints.map((points) => points.map((point) => [point.lat, point.lon] as LatLngTuple));
 
+  const elevationProfile: ElevationPoint[] = [];
+  let cumulativeMiles = 0;
+  for (const points of segmentPoints) {
+    for (let index = 0; index < points.length; index += 1) {
+      const point = points[index];
+
+      if (index > 0) {
+        cumulativeMiles += haversineMiles(points[index - 1], point);
+      }
+
+      if (Number.isFinite(point.elevationM)) {
+        elevationProfile.push({
+          distanceMi: cumulativeMiles,
+          elevationFt: metersToFeet(point.elevationM),
+        });
+      }
+    }
+  }
+
   return {
     distanceMi: miles,
     durationMin,
     segments,
+    elevationProfile,
   };
 }
 
@@ -160,6 +189,7 @@ export default function LogClient() {
   const [gpxFileName, setGpxFileName] = useState("");
   const [gpxData, setGpxData] = useState("");
   const [gpxSegments, setGpxSegments] = useState<LatLngTuple[][]>([]);
+  const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
   const [baseLayer, setBaseLayer] = useState<BaseLayerId>("usgsTopo");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -209,11 +239,14 @@ export default function LogClient() {
         try {
           const summary = parseGpxSummary(existingLog.gpxData);
           setGpxSegments(summary.segments);
+          setElevationProfile(summary.elevationProfile);
         } catch {
           setGpxSegments([]);
+          setElevationProfile([]);
         }
       } else {
         setGpxSegments([]);
+        setElevationProfile([]);
       }
       return;
     }
@@ -229,6 +262,7 @@ export default function LogClient() {
     setGpxFileName("");
     setGpxData("");
     setGpxSegments([]);
+    setElevationProfile([]);
   }, [existingLog, planItem]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -298,6 +332,7 @@ export default function LogClient() {
       setGpxData(content);
       setGpxFileName(file.name);
       setGpxSegments(summary.segments);
+      setElevationProfile(summary.elevationProfile);
       if (summary.durationMin != null) {
         setDurationMin(summary.durationMin.toFixed(1));
       }
@@ -315,6 +350,7 @@ export default function LogClient() {
     setGpxData("");
     setGpxFileName("");
     setGpxSegments([]);
+    setElevationProfile([]);
     setImportStatus("Cleared GPX attachment from this entry.");
   };
 
@@ -385,6 +421,7 @@ export default function LogClient() {
                   ))}
                 </select>
                 <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                <ElevationChart profile={elevationProfile} />
                 {baseLayer === "usgsQuad" && !quadOverlay ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
                     To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
