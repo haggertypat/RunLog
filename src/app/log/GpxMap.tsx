@@ -17,6 +17,7 @@ type GpxMapProps = {
   segments: LatLngTuple[][];
   baseLayer: BaseLayerId;
   quadOverlay?: QuadOverlay;
+  heightClassName?: string;
 };
 
 type LeafletNamespace = {
@@ -105,7 +106,7 @@ async function ensureLeaflet() {
   });
 }
 
-export default function GpxMap({ segments, baseLayer, quadOverlay }: GpxMapProps) {
+export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassName = "h-72" }: GpxMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const layerConfig = useMemo(() => BASE_LAYER_CONFIG[baseLayer], [baseLayer]);
 
@@ -155,5 +156,10 @@ export default function GpxMap({ segments, baseLayer, quadOverlay }: GpxMapProps
     };
   }, [segments, layerConfig, baseLayer, quadOverlay]);
 
-  return <div ref={mapRef} className="mt-2 h-72 w-full rounded border border-stone-300 dark:border-stone-600" />;
+  return (
+    <div
+      ref={mapRef}
+      className={`mt-2 w-full rounded border border-stone-300 dark:border-stone-600 ${heightClassName}`}
+    />
+  );
 }

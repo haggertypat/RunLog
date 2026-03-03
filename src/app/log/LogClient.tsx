@@ -510,7 +510,12 @@ export default function LogClient() {
                       ))}
                     </select>
                   </label>
-                  <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                  <GpxMap
+                    segments={gpxSegments}
+                    baseLayer={baseLayer}
+                    quadOverlay={quadOverlay}
+                    heightClassName="h-96"
+                  />
                   {/* <ElevationChart profile={elevationProfile} /> */}
                 </>
               ) : null}
