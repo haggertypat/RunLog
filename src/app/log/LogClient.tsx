@@ -258,7 +258,7 @@ export default function LogClient() {
     return {
       imageUrl,
       bounds,
-      opacity: 0.75,
+      opacity: 1,
     };
   }, [croppedQuadImageUrl]);
 
@@ -514,7 +514,7 @@ export default function LogClient() {
                     segments={gpxSegments}
                     baseLayer={baseLayer}
                     quadOverlay={quadOverlay}
-                    heightClassName="h-96"
+                    heightClassName="h-[500px]"
                   />
                   {/* <ElevationChart profile={elevationProfile} /> */}
                 </>
