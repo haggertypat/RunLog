@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type LatLngTuple = [number, number];
 type LatLngBoundsTuple = [number, number, number, number];
@@ -33,6 +33,7 @@ type LeafletNamespace = {
 
 type LeafletMap = {
   fitBounds: (bounds: unknown, options: { padding: [number, number] }) => void;
+  invalidateSize: () => void;
   remove: () => void;
 };
 
@@ -108,11 +109,45 @@ async function ensureLeaflet() {
 
 export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassName = "h-72" }: GpxMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<LeafletMap | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const layerConfig = useMemo(() => BASE_LAYER_CONFIG[baseLayer], [baseLayer]);
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const container = mapContainerRef.current;
+
+    const handleFullscreenChange = () => {
+      const activeFullscreenElement = document.fullscreenElement;
+      const fullscreenActive = activeFullscreenElement === container;
+      setIsFullscreen(fullscreenActive);
+
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 0);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (!mapContainerRef.current) return;
+
+    if (document.fullscreenElement === mapContainerRef.current) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await mapContainerRef.current.requestFullscreen();
+  };
 
   useEffect(() => {
     if (!mapRef.current || !segments.length) return;
 
+    mapInstanceRef.current?.remove();
     let map: LeafletMap | null = null;
     let cancelled = false;
 
@@ -122,6 +157,7 @@ export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassNa
 
       const routePoints = segments.flat();
       map = window.L.map(mapRef.current);
+      mapInstanceRef.current = map;
 
       window.L.tileLayer(layerConfig.url, {
         attribution: layerConfig.attribution,
@@ -153,13 +189,26 @@ export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassNa
     return () => {
       cancelled = true;
       map?.remove();
+      mapInstanceRef.current = null;
     };
   }, [segments, layerConfig, baseLayer, quadOverlay]);
 
   return (
-    <div
-      ref={mapRef}
-      className={`mt-2 w-full rounded border border-stone-300 dark:border-stone-600 ${heightClassName}`}
-    />
+    <div ref={mapContainerRef} className="relative mt-2">
+      <button
+        type="button"
+        onClick={() => {
+          void toggleFullscreen();
+        }}
+        className="absolute right-2 top-2 z-[500] rounded border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-900 shadow hover:bg-stone-100 dark:border-stone-500 dark:bg-stone-800 dark:text-stone-100 dark:hover:bg-stone-700"
+        aria-label={isFullscreen ? "Exit fullscreen map" : "Enter fullscreen map"}
+      >
+        {isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+      </button>
+      <div
+        ref={mapRef}
+        className={`w-full rounded border border-stone-300 dark:border-stone-600 ${isFullscreen ? "h-screen" : heightClassName}`}
+      />
+    </div>
   );
 }
