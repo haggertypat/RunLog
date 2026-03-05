@@ -216,6 +216,16 @@ function metersToFeet(meters: number) {
   return meters * 3.28084;
 }
 
+function formatDateDisplay(value: string) {
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
 function formatDateInputValue(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -805,7 +815,7 @@ export default function LogClient() {
             <dl className="grid gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-stone-700 dark:bg-stone-900/40 sm:grid-cols-2">
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Date</dt>
-                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.date}</dd>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{formatDateDisplay(existingLog.date)}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Title</dt>

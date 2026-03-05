@@ -5,6 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import { deleteLog, loadLogs } from "@/lib/storage";
 import { LogEntry } from "@/lib/types";
 
+function formatDateDisplay(value: string) {
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
 function formatDuration(durationMin?: number) {
   if (typeof durationMin !== "number") return "—";
 
@@ -86,7 +96,7 @@ export default function LogsPage() {
             <tbody>
               {sortedLogs.map((log) => (
                 <tr key={log.id} className="border-b border-stone-100 last:border-b-0 dark:border-stone-700">
-                  <td className="px-3 py-2">{log.date}</td>
+                  <td className="px-3 py-2">{formatDateDisplay(log.date)}</td>
                   <td className="px-3 py-2">{log.title || "—"}</td>
                   <td className="px-3 py-2">{log.week}</td>
                   <td className="px-3 py-2 capitalize">{log.type}</td>
