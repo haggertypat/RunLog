@@ -98,11 +98,11 @@ export default function LogsPage() {
                 <tr key={log.id} className="border-b border-stone-100 last:border-b-0 dark:border-stone-700">
                   <td className="px-3 py-2">{formatDateDisplay(log.date)}</td>
                   <td className="px-3 py-2">{log.title || "—"}</td>
-                  <td className="px-3 py-2">{log.week}</td>
+                  <td className="px-3 py-2">{log.week ?? "—"}</td>
                   <td className="px-3 py-2 capitalize">{log.type}</td>
                   <td className="px-3 py-2">{formatDistance(log.distanceMi)}</td>
                   <td className="px-3 py-2">{formatDuration(log.durationMin)}</td>
-                  <td className="px-3 py-2">{log.rpe}</td>
+                  <td className="px-3 py-2">{log.rpe ?? "—"}</td>
                   <td className="px-3 py-2">{log.planItemId ? "Planned" : "Unplanned"}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">

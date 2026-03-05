@@ -31,7 +31,8 @@ function formatRange(min?: number, max?: number, unit = "") {
 }
 
 function formatLoggedSummary(log: LogEntry): string {
-  const parts: string[] = [`RPE ${log.rpe}`];
+  const parts: string[] = [];
+  if (typeof log.rpe === "number") parts.push(`RPE ${log.rpe}`);
   if (typeof log.distanceMi === "number") parts.push(`${Number(log.distanceMi.toFixed(2))} mi`);
   if (typeof log.durationMin === "number") parts.push(`${Number(log.durationMin.toFixed(0))} min`);
   return parts.join(" • ");
@@ -181,6 +182,7 @@ export default function PlanPage() {
     }
 
     for (const log of logs) {
+      if (typeof log.week !== "number") continue;
       const totals = map.get(log.week);
       if (!totals) continue;
       if (typeof log.distanceMi === "number") totals.actualMiles += log.distanceMi;
