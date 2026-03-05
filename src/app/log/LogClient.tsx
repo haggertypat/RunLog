@@ -85,32 +85,39 @@ function parseQuadOverlays(value: string | undefined): QuadOverlay[] {
   if (!value) return [];
 
   try {
-    const parsed = JSON.parse(value);
+    const parsed: unknown = JSON.parse(value);
     if (!Array.isArray(parsed)) return [];
 
-    return parsed
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const imageUrl = typeof item.imageUrl === "string" ? item.imageUrl : null;
-        const boundsSource = Array.isArray(item.bounds) ? item.bounds : null;
+    const overlays: QuadOverlay[] = [];
 
-        if (!imageUrl || !boundsSource || boundsSource.length !== 4) return null;
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const itemRecord = item as Record<string, unknown>;
 
-        const bounds = boundsSource.map((part) => Number(part));
-        if (bounds.some((part) => !Number.isFinite(part))) return null;
+      const imageUrl = typeof itemRecord.imageUrl === "string" ? itemRecord.imageUrl : null;
+      const boundsSource = Array.isArray(itemRecord.bounds) ? itemRecord.bounds : null;
 
-        return {
-          imageUrl,
-          bounds: [bounds[0], bounds[1], bounds[2], bounds[3]] as QuadBounds,
-          opacity: 1,
-          borderCrop: parseQuadBorderCrop(item.borderCrop),
-        };
-      })
-      .filter((item): item is QuadOverlay => Boolean(item));
+      if (!imageUrl || !boundsSource || boundsSource.length !== 4) continue;
+
+      const bounds = boundsSource.map((part: unknown) => Number(part));
+      if (bounds.some((part) => !Number.isFinite(part))) continue;
+
+      const borderCrop = parseQuadBorderCrop(itemRecord.borderCrop);
+
+      overlays.push({
+        imageUrl,
+        bounds: [bounds[0], bounds[1], bounds[2], bounds[3]] as QuadBounds,
+        opacity: 1,
+        borderCrop,
+      });
+    }
+
+    return overlays;
   } catch {
     return [];
   }
 }
+
 
 function parseQuadBounds(value: string | undefined): QuadBounds | null {
   if (!value) return null;
@@ -676,13 +683,13 @@ export default function LogClient() {
                     </option>
                   ))}
                 </select>
-                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlays={quadOverlays} />
                 {/* <ElevationChart profile={elevationProfile} /> */}
-                {baseLayer === "usgsQuad" && !quadOverlay ? (
+                {baseLayer === "usgsQuad" && !quadOverlays?.length ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
-                    To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
-                    NEXT_PUBLIC_USGS_QUAD_BOUNDS=&quot;south,west,north,east&quot;. Optional:
-                    NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot; (fractions like 0.06).
+                    Configure custom quads with NEXT_PUBLIC_USGS_QUAD_OVERLAYS (JSON array) or fallback
+                    NEXT_PUBLIC_USGS_QUAD_IMAGE_URL + NEXT_PUBLIC_USGS_QUAD_BOUNDS. Optional crop:
+                    NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot;.
                   </span>
                 ) : null}
               </>
