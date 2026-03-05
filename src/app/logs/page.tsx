@@ -73,6 +73,7 @@ export default function LogsPage() {
             <thead className="border-b border-stone-200 text-xs uppercase text-stone-500 dark:border-stone-600 dark:text-stone-400">
               <tr>
                 <th className="px-3 py-2">Date</th>
+                <th className="px-3 py-2">Title</th>
                 <th className="px-3 py-2">Week</th>
                 <th className="px-3 py-2">Type</th>
                 <th className="px-3 py-2">Distance</th>
@@ -86,6 +87,7 @@ export default function LogsPage() {
               {sortedLogs.map((log) => (
                 <tr key={log.id} className="border-b border-stone-100 last:border-b-0 dark:border-stone-700">
                   <td className="px-3 py-2">{log.date}</td>
+                  <td className="px-3 py-2">{log.title || "—"}</td>
                   <td className="px-3 py-2">{log.week}</td>
                   <td className="px-3 py-2 capitalize">{log.type}</td>
                   <td className="px-3 py-2">{formatDistance(log.distanceMi)}</td>

@@ -88,6 +88,7 @@ function isLogEntry(value: unknown): value is LogEntry {
   return (
     typeof candidate.id === "string" &&
     typeof candidate.date === "string" &&
+    (typeof candidate.title === "undefined" || typeof candidate.title === "string") &&
     typeof candidate.week === "number" &&
     (candidate.type === "run" || candidate.type === "strength") &&
     typeof candidate.rpe === "number" &&

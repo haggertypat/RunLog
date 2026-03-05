@@ -309,6 +309,7 @@ export default function LogClient() {
   const planItem = useMemo(() => (planItemId ? getPlanItemById(planItemId) : undefined), [planItemId]);
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [title, setTitle] = useState(planItem?.title ?? "");
   const [week, setWeek] = useState(planItem?.week ?? 1);
   const [type, setType] = useState<PlanItemType>(planItem?.type ?? "run");
   const [distanceMi, setDistanceMi] = useState("");
@@ -505,6 +506,7 @@ export default function LogClient() {
     const loadExistingGpx = async () => {
       if (!existingLog) {
         setDate(new Date().toISOString().slice(0, 10));
+        setTitle(planItem?.title ?? "");
         setWeek(planItem?.week ?? 1);
         setType(planItem?.type ?? "run");
         setDistanceMi(planItem?.estimatedMilesMin != null ? String(planItem.estimatedMilesMin) : "");
@@ -520,6 +522,7 @@ export default function LogClient() {
       }
 
       setDate(existingLog.date);
+      setTitle(existingLog.title ?? planItem?.title ?? "");
       setWeek(existingLog.week);
       setType(existingLog.type);
       setDistanceMi(existingLog.distanceMi != null ? String(existingLog.distanceMi) : "");
@@ -581,6 +584,7 @@ export default function LogClient() {
     const parsedRpe = Number(rpe);
 
     if (!date) return setError("Date is required.");
+    if (!title.trim()) return setError("Title is required.");
     if (!parsedWeek || parsedWeek < 1 || parsedWeek > 10) return setError("Week must be 1-10.");
     if (!parsedRpe || parsedRpe < 1 || parsedRpe > 10) return setError("RPE must be 1-10.");
 
@@ -592,6 +596,7 @@ export default function LogClient() {
     const entry: LogEntry = {
       id: existingLog?.id ?? crypto.randomUUID(),
       date,
+      title: title.trim(),
       planItemId: planItem?.id ?? existingLog?.planItemId,
       week: parsedWeek,
       type,
@@ -790,6 +795,10 @@ export default function LogClient() {
                 <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.date}</dd>
               </div>
               <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Title</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.title || "—"}</dd>
+              </div>
+              <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Week</dt>
                 <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.week}</dd>
               </div>
@@ -898,6 +907,10 @@ export default function LogClient() {
           <label className="text-sm">
             Date
             <input type="date" className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label className="text-sm sm:col-span-2">
+            Title
+            <input className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
           <label className="text-sm">
             Week
