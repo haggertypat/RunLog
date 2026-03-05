@@ -333,32 +333,9 @@ export default function MapPage() {
 
   return (
     <section className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-xl font-semibold">All GPX Tracks Map</h2>
-          <p className="text-sm text-stone-600 dark:text-stone-300">Showing {trackCount} GPX track segment{trackCount === 1 ? "" : "s"} from saved logs.</p>
-        </div>
-        <Link href="/plan" className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-700 dark:border-stone-600 dark:text-stone-200">
-          Back to plan
-        </Link>
-      </div>
 
       {segments.length ? (
         <>
-          <label className="block text-sm">
-            Map background
-            <select
-              className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
-              value={baseLayer}
-              onChange={(event) => setBaseLayer(event.target.value as BaseLayerId)}
-            >
-              {MAP_LAYER_OPTIONS.map((layer) => (
-                <option key={layer.id} value={layer.id}>
-                  {layer.label}
-                </option>
-              ))}
-            </select>
-          </label>
           <GpxMap segments={segments} baseLayer={baseLayer} quadOverlays={quadOverlays} heightClassName="h-[calc(100vh-13rem)]" />
           {baseLayer === "usgsQuad" && !overlayEditors.length ? (
             <span className="block text-xs text-amber-700 dark:text-amber-300">
@@ -366,11 +343,12 @@ export default function MapPage() {
               NEXT_PUBLIC_USGS_QUAD_BOUNDS. Optional crop: NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot;.
             </span>
           ) : null}
-          {baseLayer === "usgsQuad" ? (
+           
+          {/* {baseLayer === "usgsQuad" ? (
             <span className="block text-xs text-stone-600 dark:text-stone-300">
               Overlay source: {quadOverlayDebug.source}; active overlays: {quadOverlays?.length ?? 0}.
             </span>
-          ) : null}
+          ) : null} */}
           {baseLayer === "usgsQuad" && quadOverlayStatus ? (
             <span className="block text-xs text-amber-700 dark:text-amber-300">{quadOverlayStatus}</span>
           ) : null}
@@ -422,6 +400,20 @@ export default function MapPage() {
               ) : null}
             </div>
           ) : null}
+          <label className="block text-sm">
+            Map background
+            <select
+              className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 text-sm dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+              value={baseLayer}
+              onChange={(event) => setBaseLayer(event.target.value as BaseLayerId)}
+            >
+              {MAP_LAYER_OPTIONS.map((layer) => (
+                <option key={layer.id} value={layer.id}>
+                  {layer.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </>
       ) : (
         <div className="rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700 dark:border-stone-700 dark:bg-stone-900/40 dark:text-stone-200">
