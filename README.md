@@ -28,18 +28,20 @@ Preferred (multiple overlays):
 
 ```bash
 NEXT_PUBLIC_USGS_QUAD_OVERLAYS='[
-  {"imageUrl":"/quads/quad-a.png","bounds":[39.70,-105.06,39.78,-104.96]},
-  {"imageUrl":"/quads/quad-b.png","bounds":[39.70,-104.96,39.78,-104.86]}
+  {"imageUrl":"/quads/quad-a.png","bounds":[39.70,-105.06,39.78,-104.96],"borderCrop":[0.06,0.04,0.07,0.05]},
+  {"imageUrl":"/quads/quad-b.png","bounds":[39.70,-104.96,39.78,-104.86],"borderCrop":[0.05,0.03,0.06,0.04]}
 ]'
 ```
 
 Each `bounds` array is `[south, west, north, east]`.
+Optional `borderCrop` is `[top, right, bottom, left]` as fractions (0-1).
 
 Backward-compatible fallback (single overlay):
 
 ```bash
 NEXT_PUBLIC_USGS_QUAD_IMAGE_URL=/my-quad-image.png
 NEXT_PUBLIC_USGS_QUAD_BOUNDS=39.70,-105.06,39.78,-104.96
+NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=0.06,0.04,0.07,0.05
 ```
 
 ## Data model
