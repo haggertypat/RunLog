@@ -4,6 +4,13 @@ export const LOG_STORAGE_KEY = "run_log_v1";
 
 const isClient = () => typeof window !== "undefined";
 
+type SaveLogsResult = {
+  strippedGpxCount: number;
+};
+
+const isQuotaExceededError = (error: unknown) =>
+  error instanceof DOMException && (error.name === "QuotaExceededError" || error.code === 22);
+
 export const loadLogs = (): LogEntry[] => {
   if (!isClient()) return [];
 
@@ -17,20 +24,48 @@ export const loadLogs = (): LogEntry[] => {
   }
 };
 
-export const saveLogs = (logs: LogEntry[]) => {
-  if (!isClient()) return;
-  window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
+export const saveLogs = (logs: LogEntry[]): SaveLogsResult => {
+  if (!isClient()) return { strippedGpxCount: 0 };
+
+  const persist = (candidateLogs: LogEntry[]) => {
+    window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(candidateLogs));
+  };
+
+  try {
+    persist(logs);
+    return { strippedGpxCount: 0 };
+  } catch (error) {
+    if (!isQuotaExceededError(error)) throw error;
+
+    const nextLogs = [...logs];
+    let strippedGpxCount = 0;
+
+    for (let index = nextLogs.length - 1; index >= 0; index -= 1) {
+      if (!nextLogs[index]?.gpxData) continue;
+      nextLogs[index] = { ...nextLogs[index], gpxData: undefined, gpxFileName: undefined };
+      strippedGpxCount += 1;
+
+      try {
+        persist(nextLogs);
+        return { strippedGpxCount };
+      } catch (retryError) {
+        if (!isQuotaExceededError(retryError)) throw retryError;
+      }
+    }
+
+    throw error;
+  }
 };
 
-export const addLog = (entry: LogEntry) => {
+export const addLog = (entry: LogEntry): SaveLogsResult => {
   const logs = loadLogs();
-  saveLogs([entry, ...logs]);
+  return saveLogs([entry, ...logs]);
 };
 
-export const updateLog = (entry: LogEntry) => {
+export const updateLog = (entry: LogEntry): SaveLogsResult => {
   const logs = loadLogs();
   const next = logs.map((log) => (log.id === entry.id ? entry : log));
-  saveLogs(next);
+  return saveLogs(next);
 };
 
 export const deleteLog = (id: string) => {

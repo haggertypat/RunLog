@@ -384,16 +384,26 @@ export default function LogClient() {
       createdAt: existingLog?.createdAt ?? new Date().toISOString(),
     };
 
-    if (existingLog) {
-      updateLog(entry);
-      setSuccess("Updated log.");
-      setIsEditing(false);
-    } else {
-      addLog(entry);
-      setSuccess("Saved log entry.");
-    }
+    try {
+      const result = existingLog ? updateLog(entry) : addLog(entry);
+      const baseMessage = existingLog ? "Updated log." : "Saved log entry.";
+      const gpxTrimmedMessage =
+        result.strippedGpxCount > 0
+          ? ` ${result.strippedGpxCount} older GPX attachment${result.strippedGpxCount === 1 ? " was" : "s were"} removed to stay within browser storage limits.`
+          : "";
 
-    refreshLogs();
+      setSuccess(`${baseMessage}${gpxTrimmedMessage}`);
+      if (existingLog) {
+        setIsEditing(false);
+      }
+      refreshLogs();
+    } catch (saveError) {
+      setError(
+        saveError instanceof DOMException && saveError.name === "QuotaExceededError"
+          ? "Could not save log because browser storage is full. Remove some logs or GPX files and try again."
+          : "Could not save log. Please try again.",
+      );
+    }
   };
 
   const handleDelete = () => {
