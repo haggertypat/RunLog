@@ -9,8 +9,8 @@ function formatDateDisplay(value: string) {
   const parsed = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
+    month: "numeric",
+    day: "numeric",
     year: "numeric",
   });
 }
@@ -18,10 +18,12 @@ function formatDateDisplay(value: string) {
 function formatDuration(durationMin?: number) {
   if (typeof durationMin !== "number") return "—";
 
-  const roundedMinutes = Math.floor(durationMin);
-  const seconds = Math.round((durationMin - roundedMinutes) * 60);
-  if (seconds === 0) return `${roundedMinutes}m`;
-  return `${roundedMinutes}m ${seconds}s`;
+  const totalSeconds = Math.max(0, Math.round(durationMin * 60));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
 function formatDistance(distanceMi?: number) {
