@@ -211,15 +211,39 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
-    const logs = loadLogs();
-    const nextSegments: LatLngTuple[][] = [];
+    let cancelled = false;
 
-    logs.forEach((log) => {
-      if (!log.gpxData) return;
-      nextSegments.push(...parseGpxSegments(log.gpxData));
-    });
+    const loadSegments = async () => {
+      const logs = loadLogs();
+      const nextSegments: LatLngTuple[][] = [];
 
-    setSegments(nextSegments);
+      for (const log of logs) {
+        try {
+          const content = log.gpxUploadId
+            ? await fetch(`/api/gpx/${log.gpxUploadId}`).then(async (response) => {
+                if (!response.ok) return "";
+                const payload = (await response.json()) as { content?: string };
+                return payload.content ?? "";
+              })
+            : log.gpxData ?? "";
+
+          if (!content) continue;
+          nextSegments.push(...parseGpxSegments(content));
+        } catch {
+          continue;
+        }
+      }
+
+      if (!cancelled) {
+        setSegments(nextSegments);
+      }
+    };
+
+    loadSegments();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

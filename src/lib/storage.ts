@@ -6,6 +6,7 @@ const isClient = () => typeof window !== "undefined";
 
 type SaveLogsResult = {
   strippedGpxCount: number;
+  strippedEntryIds: string[];
 };
 
 const isQuotaExceededError = (error: unknown) =>
@@ -24,8 +25,8 @@ export const loadLogs = (): LogEntry[] => {
   }
 };
 
-export const saveLogs = (logs: LogEntry[]): SaveLogsResult => {
-  if (!isClient()) return { strippedGpxCount: 0 };
+export const saveLogs = (logs: LogEntry[], stripEntryIds?: string[]): SaveLogsResult => {
+  if (!isClient()) return { strippedGpxCount: 0, strippedEntryIds: [] };
 
   const persist = (candidateLogs: LogEntry[]) => {
     window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(candidateLogs));
@@ -33,21 +34,28 @@ export const saveLogs = (logs: LogEntry[]): SaveLogsResult => {
 
   try {
     persist(logs);
-    return { strippedGpxCount: 0 };
+    return { strippedGpxCount: 0, strippedEntryIds: [] };
   } catch (error) {
     if (!isQuotaExceededError(error)) throw error;
 
     const nextLogs = [...logs];
     let strippedGpxCount = 0;
+    const strippedEntryIds: string[] = [];
 
-    for (let index = nextLogs.length - 1; index >= 0; index -= 1) {
-      if (!nextLogs[index]?.gpxData) continue;
+    const stripIds = stripEntryIds?.length
+      ? stripEntryIds
+      : nextLogs.map((log) => log.id).reverse();
+
+    for (const stripId of stripIds) {
+      const index = nextLogs.findIndex((log) => log.id === stripId);
+      if (index < 0 || !nextLogs[index]?.gpxData) continue;
       nextLogs[index] = { ...nextLogs[index], gpxData: undefined, gpxFileName: undefined };
       strippedGpxCount += 1;
+      strippedEntryIds.push(nextLogs[index].id);
 
       try {
         persist(nextLogs);
-        return { strippedGpxCount };
+        return { strippedGpxCount, strippedEntryIds };
       } catch (retryError) {
         if (!isQuotaExceededError(retryError)) throw retryError;
       }
@@ -59,13 +67,13 @@ export const saveLogs = (logs: LogEntry[]): SaveLogsResult => {
 
 export const addLog = (entry: LogEntry): SaveLogsResult => {
   const logs = loadLogs();
-  return saveLogs([entry, ...logs]);
+  return saveLogs([entry, ...logs], [entry.id]);
 };
 
 export const updateLog = (entry: LogEntry): SaveLogsResult => {
   const logs = loadLogs();
   const next = logs.map((log) => (log.id === entry.id ? entry : log));
-  return saveLogs(next);
+  return saveLogs(next, [entry.id]);
 };
 
 export const deleteLog = (id: string) => {
@@ -86,6 +94,7 @@ function isLogEntry(value: unknown): value is LogEntry {
     typeof candidate.surface === "string" &&
     typeof candidate.notes === "string" &&
     (typeof candidate.gpxFileName === "undefined" || typeof candidate.gpxFileName === "string") &&
+    (typeof candidate.gpxUploadId === "undefined" || typeof candidate.gpxUploadId === "string") &&
     (typeof candidate.gpxData === "undefined" || typeof candidate.gpxData === "string") &&
     typeof candidate.createdAt === "string"
   );

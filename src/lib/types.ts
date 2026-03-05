@@ -29,6 +29,7 @@ export type LogEntry = {
   surface: string;
   notes: string;
   gpxFileName?: string;
+  gpxUploadId?: string;
   gpxData?: string;
   createdAt: string;
 };
