@@ -34,6 +34,11 @@ type QuadOverlay = {
   borderCrop?: QuadBorderCrop;
 };
 
+type QuadOverlayDebug = {
+  source: "multi" | "single" | "none";
+  parseWarning?: string;
+};
+
 async function cropQuadImageUrl(imageUrl: string, crop?: QuadBorderCrop): Promise<string> {
   if (!crop) return imageUrl;
 
@@ -299,26 +304,54 @@ export default function LogClient() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isEditing, setIsEditing] = useState(!planItem);
 
-  const configuredQuadOverlays = useMemo(() => {
-    const configuredOverlays = parseQuadOverlays(process.env.NEXT_PUBLIC_USGS_QUAD_OVERLAYS);
-    if (configuredOverlays.length) return configuredOverlays;
+  const { configuredQuadOverlays, quadOverlayDebug } = useMemo(() => {
+    const multiOverlayRaw = process.env.NEXT_PUBLIC_USGS_QUAD_OVERLAYS;
+    const configuredOverlays = parseQuadOverlays(multiOverlayRaw);
+
+    if (configuredOverlays.length) {
+      return {
+        configuredQuadOverlays: configuredOverlays,
+        quadOverlayDebug: { source: "multi" } as QuadOverlayDebug,
+      };
+    }
+
+    if (multiOverlayRaw?.trim()) {
+      return {
+        configuredQuadOverlays: undefined,
+        quadOverlayDebug: {
+          source: "none",
+          parseWarning:
+            "NEXT_PUBLIC_USGS_QUAD_OVERLAYS is set but no valid overlays were parsed. Confirm valid JSON and bounds format [south,west,north,east].",
+        } as QuadOverlayDebug,
+      };
+    }
 
     const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
     const bounds = parseQuadBounds(process.env.NEXT_PUBLIC_USGS_QUAD_BOUNDS);
-    if (!imageUrl || !bounds) return undefined;
+    if (!imageUrl || !bounds) {
+      return {
+        configuredQuadOverlays: undefined,
+        quadOverlayDebug: { source: "none" } as QuadOverlayDebug,
+      };
+    }
+
     const borderCrop = parseQuadBorderCropString(process.env.NEXT_PUBLIC_USGS_QUAD_BORDER_CROP);
 
-    return [
-      {
-        imageUrl,
-        bounds,
-        opacity: 1,
-        borderCrop,
-      },
-    ];
+    return {
+      configuredQuadOverlays: [
+        {
+          imageUrl,
+          bounds,
+          opacity: 1,
+          borderCrop,
+        },
+      ],
+      quadOverlayDebug: { source: "single" } as QuadOverlayDebug,
+    };
   }, []);
 
   const [quadOverlays, setQuadOverlays] = useState<QuadOverlay[] | undefined>(configuredQuadOverlays);
+  const [quadOverlayStatus, setQuadOverlayStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,6 +359,7 @@ export default function LogClient() {
     const processQuadOverlays = async () => {
       if (!configuredQuadOverlays?.length) {
         setQuadOverlays(undefined);
+        setQuadOverlayStatus(quadOverlayDebug.parseWarning ?? null);
         return;
       }
 
@@ -342,10 +376,11 @@ export default function LogClient() {
 
       if (!cancelled) {
         setQuadOverlays(processed);
+        setQuadOverlayStatus(null);
       }
     };
 
-    processQuadOverlays().catch(() => {
+    processQuadOverlays().catch((cropError) => {
       if (!cancelled) {
         setQuadOverlays(
           configuredQuadOverlays?.map((overlay) => ({
@@ -354,13 +389,16 @@ export default function LogClient() {
             opacity: 1,
           })),
         );
+        const cropErrorMessage = cropError instanceof Error ? cropError.message : "Unknown crop error.";
+        setQuadOverlayStatus(`Using original overlay images (crop failed): ${cropErrorMessage}`);
+        console.warn("USGS overlay crop failed; using original images.", cropError);
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [configuredQuadOverlays]);
+  }, [configuredQuadOverlays, quadOverlayDebug.parseWarning]);
 
   const existingLog = useMemo(() => {
     if (!planItem) return null;
@@ -587,6 +625,12 @@ export default function LogClient() {
                     quadOverlays={quadOverlays}
                     heightClassName="h-[500px]"
                   />
+                  {baseLayer === "usgsQuad" ? (
+                    <p className="mt-1 text-xs text-stone-600 dark:text-stone-300">
+                      Overlay source: {quadOverlayDebug.source}; active overlays: {quadOverlays?.length ?? 0}.
+                      {quadOverlayStatus ? ` ${quadOverlayStatus}` : ""}
+                    </p>
+                  ) : null}
                   {/* <ElevationChart profile={elevationProfile} /> */}
                 </>
               ) : null}
@@ -691,6 +735,14 @@ export default function LogClient() {
                     NEXT_PUBLIC_USGS_QUAD_IMAGE_URL + NEXT_PUBLIC_USGS_QUAD_BOUNDS. Optional crop:
                     NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot;.
                   </span>
+                ) : null}
+                {baseLayer === "usgsQuad" ? (
+                  <span className="mt-1 block text-xs text-stone-600 dark:text-stone-300">
+                    Overlay source: {quadOverlayDebug.source}; active overlays: {quadOverlays?.length ?? 0}.
+                  </span>
+                ) : null}
+                {baseLayer === "usgsQuad" && quadOverlayStatus ? (
+                  <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">{quadOverlayStatus}</span>
                 ) : null}
               </>
             ) : null}
