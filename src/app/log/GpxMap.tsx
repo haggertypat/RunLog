@@ -32,6 +32,8 @@ type LeafletNamespace = {
 
 type LeafletMap = {
   setView: (center: LatLngTuple, zoom: number) => void;
+  getCenter: () => { lat: number; lng: number };
+  getZoom: () => number;
   remove: () => void;
 };
 
@@ -107,6 +109,7 @@ async function ensureLeaflet() {
 
 export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassName = "h-72" }: GpxMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const savedViewRef = useRef<{ center: LatLngTuple; zoom: number } | null>(null);
   const layerConfig = useMemo(() => BASE_LAYER_CONFIG[baseLayer], [baseLayer]);
 
   useEffect(() => {
@@ -121,9 +124,13 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
 
       map = window.L.map(mapRef.current);
 
-      const initialPoint = segments.find((segment) => segment.length)?.[0];
-      if (initialPoint) {
-        map.setView(initialPoint, 13);
+      if (savedViewRef.current) {
+        map.setView(savedViewRef.current.center, savedViewRef.current.zoom);
+      } else {
+        const initialPoint = segments.find((segment) => segment.length)?.[0];
+        if (initialPoint) {
+          map.setView(initialPoint, 13);
+        }
       }
 
       window.L.tileLayer(layerConfig.url, {
@@ -153,7 +160,14 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
 
     return () => {
       cancelled = true;
-      map?.remove();
+      if (map) {
+        const center = map.getCenter();
+        savedViewRef.current = {
+          center: [center.lat, center.lng],
+          zoom: map.getZoom(),
+        };
+        map.remove();
+      }
     };
   }, [segments, layerConfig, baseLayer, quadOverlays]);
 
