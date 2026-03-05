@@ -216,6 +216,13 @@ function metersToFeet(meters: number) {
   return meters * 3.28084;
 }
 
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function parseGpxSummary(content: string) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(content, "application/xml");
@@ -266,6 +273,7 @@ function parseGpxSummary(content: string) {
   }
 
   const timestamps = segmentPoints.flat().map((point) => point.timestamp).filter(Number.isFinite);
+  const startTimestamp = timestamps.length ? Math.min(...timestamps) : null;
   const durationMin =
     timestamps.length >= 2
       ? Math.max(0, (Math.max(...timestamps) - Math.min(...timestamps)) / 60000)
@@ -295,6 +303,7 @@ function parseGpxSummary(content: string) {
   return {
     distanceMi: miles,
     durationMin,
+    date: startTimestamp != null ? formatDateInputValue(new Date(startTimestamp)) : null,
     segments,
     elevationProfile,
   };
@@ -674,6 +683,9 @@ export default function LogClient() {
       }
 
       setDistanceMi(summary.distanceMi.toFixed(2));
+      if (summary.date) {
+        setDate(summary.date);
+      }
       setGpxUploadId(uploadPayload.uploadId);
       setGpxFileName(uploadPayload.fileName ?? file.name);
       setGpxSegments(summary.segments);
@@ -681,9 +693,10 @@ export default function LogClient() {
       if (summary.durationMin != null) {
         setDurationMin(summary.durationMin.toFixed(1));
       }
-      setImportStatus(
-        `Imported GPX${summary.durationMin != null ? " distance and duration" : " distance"}. Review before saving.`,
-      );
+      const importedFields = ["distance"];
+      if (summary.durationMin != null) importedFields.push("duration");
+      if (summary.date) importedFields.push("date");
+      setImportStatus(`Imported GPX ${importedFields.join(", ")}. Review before saving.`);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Unable to parse GPX file.");
     } finally {
