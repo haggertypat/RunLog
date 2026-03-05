@@ -27,12 +27,10 @@ type LeafletNamespace = {
     options: { attribution: string; maxZoom?: number },
   ) => { addTo: (map: LeafletMap) => void };
   polyline: (positions: LatLngTuple[], options: { color: string; weight: number }) => { addTo: (map: LeafletMap) => void };
-  latLngBounds: (positions: LatLngTuple[] | [LatLngTuple, LatLngTuple]) => unknown;
   imageOverlay: (imageUrl: string, bounds: [LatLngTuple, LatLngTuple], options: { opacity: number }) => { addTo: (map: LeafletMap) => void };
 };
 
 type LeafletMap = {
-  fitBounds: (bounds: unknown, options: { padding: [number, number] }) => void;
   remove: () => void;
 };
 
@@ -120,7 +118,6 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
       await ensureLeaflet();
       if (cancelled || !window.L || !mapRef.current) return;
 
-      const routePoints = segments.flat();
       map = window.L.map(mapRef.current);
 
       window.L.tileLayer(layerConfig.url, {
@@ -144,10 +141,6 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
         }).addTo(map as LeafletMap);
       });
 
-      const bounds = window.L.latLngBounds(routePoints);
-      map.fitBounds(bounds, {
-        padding: [24, 24],
-      });
     };
 
     renderMap();
