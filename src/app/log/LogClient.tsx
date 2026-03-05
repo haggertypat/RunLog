@@ -216,6 +216,23 @@ function metersToFeet(meters: number) {
   return meters * 3.28084;
 }
 
+function formatDateDisplay(value: string) {
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+}
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function parseGpxSummary(content: string) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(content, "application/xml");
@@ -266,6 +283,7 @@ function parseGpxSummary(content: string) {
   }
 
   const timestamps = segmentPoints.flat().map((point) => point.timestamp).filter(Number.isFinite);
+  const startTimestamp = timestamps.length ? Math.min(...timestamps) : null;
   const durationMin =
     timestamps.length >= 2
       ? Math.max(0, (Math.max(...timestamps) - Math.min(...timestamps)) / 60000)
@@ -295,6 +313,7 @@ function parseGpxSummary(content: string) {
   return {
     distanceMi: miles,
     durationMin,
+    date: startTimestamp != null ? formatDateInputValue(new Date(startTimestamp)) : null,
     segments,
     elevationProfile,
   };
@@ -304,9 +323,12 @@ export default function LogClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planItemId = searchParams.get("planItemId") ?? "";
+  const logId = searchParams.get("logId") ?? "";
+  const startInEditMode = searchParams.get("mode") === "edit";
   const planItem = useMemo(() => (planItemId ? getPlanItemById(planItemId) : undefined), [planItemId]);
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [title, setTitle] = useState(planItem?.title ?? "");
   const [week, setWeek] = useState(planItem?.week ?? 1);
   const [type, setType] = useState<PlanItemType>(planItem?.type ?? "run");
   const [distanceMi, setDistanceMi] = useState("");
@@ -323,7 +345,7 @@ export default function LogClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isEditing, setIsEditing] = useState(!planItem);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { configuredQuadOverlays, quadOverlayDebug } = useMemo(() => {
     const multiOverlayRaw = process.env.NEXT_PUBLIC_USGS_QUAD_OVERLAYS;
@@ -480,9 +502,13 @@ export default function LogClient() {
   }, [helperOverlay, quadOverlays]);
 
   const existingLog = useMemo(() => {
+    if (logId) {
+      return logs.find((log) => log.id === logId) ?? null;
+    }
+
     if (!planItem) return null;
     return logs.find((log) => log.planItemId === planItem.id) ?? null;
-  }, [logs, planItem]);
+  }, [logId, logs, planItem]);
 
   const refreshLogs = () => {
     setLogs(loadLogs());
@@ -499,6 +525,7 @@ export default function LogClient() {
     const loadExistingGpx = async () => {
       if (!existingLog) {
         setDate(new Date().toISOString().slice(0, 10));
+        setTitle(planItem?.title ?? "");
         setWeek(planItem?.week ?? 1);
         setType(planItem?.type ?? "run");
         setDistanceMi(planItem?.estimatedMilesMin != null ? String(planItem.estimatedMilesMin) : "");
@@ -514,6 +541,7 @@ export default function LogClient() {
       }
 
       setDate(existingLog.date);
+      setTitle(existingLog.title ?? planItem?.title ?? "");
       setWeek(existingLog.week);
       setType(existingLog.type);
       setDistanceMi(existingLog.distanceMi != null ? String(existingLog.distanceMi) : "");
@@ -563,8 +591,8 @@ export default function LogClient() {
   }, [existingLog, planItem]);
 
   useEffect(() => {
-    setIsEditing(!existingLog);
-  }, [existingLog]);
+    setIsEditing(startInEditMode || !existingLog);
+  }, [existingLog, startInEditMode]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -575,6 +603,7 @@ export default function LogClient() {
     const parsedRpe = Number(rpe);
 
     if (!date) return setError("Date is required.");
+    if (!title.trim()) return setError("Title is required.");
     if (!parsedWeek || parsedWeek < 1 || parsedWeek > 10) return setError("Week must be 1-10.");
     if (!parsedRpe || parsedRpe < 1 || parsedRpe > 10) return setError("RPE must be 1-10.");
 
@@ -586,7 +615,8 @@ export default function LogClient() {
     const entry: LogEntry = {
       id: existingLog?.id ?? crypto.randomUUID(),
       date,
-      planItemId: planItem?.id,
+      title: title.trim(),
+      planItemId: planItem?.id ?? existingLog?.planItemId,
       week: parsedWeek,
       type,
       distanceMi: distanceMi ? Number(distanceMi) : undefined,
@@ -663,6 +693,9 @@ export default function LogClient() {
       }
 
       setDistanceMi(summary.distanceMi.toFixed(2));
+      if (summary.date) {
+        setDate(summary.date);
+      }
       setGpxUploadId(uploadPayload.uploadId);
       setGpxFileName(uploadPayload.fileName ?? file.name);
       setGpxSegments(summary.segments);
@@ -670,9 +703,10 @@ export default function LogClient() {
       if (summary.durationMin != null) {
         setDurationMin(summary.durationMin.toFixed(1));
       }
-      setImportStatus(
-        `Imported GPX${summary.durationMin != null ? " distance and duration" : " distance"}. Review before saving.`,
-      );
+      const importedFields = ["distance"];
+      if (summary.durationMin != null) importedFields.push("duration");
+      if (summary.date) importedFields.push("date");
+      setImportStatus(`Imported GPX ${importedFields.join(", ")}. Review before saving.`);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Unable to parse GPX file.");
     } finally {
@@ -695,10 +729,10 @@ export default function LogClient() {
   return (
     <section className="space-y-4">
       <Link
-        href="/plan"
+        href={planItem ? "/plan" : "/logs"}
         className="inline-flex items-center text-sm font-medium text-stone-700 underline-offset-2 hover:underline dark:text-stone-200"
       >
-        ← Back to plan
+        {planItem ? "← Back to plan" : "← Back to logs"}
       </Link>
 
       {planItem ? (
@@ -781,7 +815,11 @@ export default function LogClient() {
             <dl className="grid gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-stone-700 dark:bg-stone-900/40 sm:grid-cols-2">
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Date</dt>
-                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.date}</dd>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{formatDateDisplay(existingLog.date)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Title</dt>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.title || "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Week</dt>
@@ -892,6 +930,10 @@ export default function LogClient() {
           <label className="text-sm">
             Date
             <input type="date" className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+          <label className="text-sm sm:col-span-2">
+            Title
+            <input className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
           <label className="text-sm">
             Week

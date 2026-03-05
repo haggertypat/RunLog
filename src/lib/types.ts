@@ -20,6 +20,7 @@ export type PlanItem = {
 export type LogEntry = {
   id: string;
   date: string;
+  title?: string;
   planItemId?: string;
   week: number;
   type: PlanItemType;
