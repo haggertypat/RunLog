@@ -36,6 +36,8 @@ NEXT_PUBLIC_USGS_QUAD_OVERLAYS='[
 Each `bounds` array is `[south, west, north, east]`.
 Optional `borderCrop` is `[top, right, bottom, left]` as fractions (0-1).
 
+Tip: on `/log`, switch to **USGS Quad (custom image overlay)** and use the **Overlay helper (live preview + copy/paste config)** panel to iteratively tune bounds/crop and copy a ready-to-paste JSON value for `NEXT_PUBLIC_USGS_QUAD_OVERLAYS`.
+
 Backward-compatible fallback (single overlay):
 
 ```bash

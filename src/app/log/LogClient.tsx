@@ -373,6 +373,11 @@ export default function LogClient() {
 
   const [quadOverlays, setQuadOverlays] = useState<QuadOverlay[] | undefined>(configuredQuadOverlays);
   const [quadOverlayStatus, setQuadOverlayStatus] = useState<string | null>(null);
+  const [helperImageUrl, setHelperImageUrl] = useState("");
+  const [helperBounds, setHelperBounds] = useState("");
+  const [helperCrop, setHelperCrop] = useState("0,0,0,0");
+  const [helperOverlay, setHelperOverlay] = useState<QuadOverlay | null>(null);
+  const [helperStatus, setHelperStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -420,6 +425,59 @@ export default function LogClient() {
       cancelled = true;
     };
   }, [configuredQuadOverlays, quadOverlayDebug.parseWarning]);
+
+  useEffect(() => {
+    const trimmedImageUrl = helperImageUrl.trim();
+    const parsedBounds = parseQuadBounds(helperBounds);
+
+    if (!trimmedImageUrl || !parsedBounds) {
+      setHelperOverlay(null);
+      setHelperStatus(null);
+      return;
+    }
+
+    const parsedCrop = parseQuadBorderCropString(helperCrop);
+
+    cropQuadImageUrl(trimmedImageUrl, parsedCrop)
+      .then((croppedImageUrl) => {
+        setHelperOverlay({
+          imageUrl: croppedImageUrl,
+          bounds: parsedBounds,
+          opacity: 0.9,
+        });
+        setHelperStatus(null);
+      })
+      .catch((cropError) => {
+        setHelperOverlay({
+          imageUrl: trimmedImageUrl,
+          bounds: parsedBounds,
+          opacity: 0.9,
+        });
+        const cropErrorMessage = cropError instanceof Error ? cropError.message : "Unknown crop error.";
+        setHelperStatus(`Crop preview failed, using original image: ${cropErrorMessage}`);
+      });
+  }, [helperBounds, helperCrop, helperImageUrl]);
+
+  const helperOverlayConfig = useMemo(() => {
+    if (!helperOverlay) return "";
+
+    return JSON.stringify(
+      [
+        {
+          imageUrl: helperImageUrl.trim(),
+          bounds: helperOverlay.bounds,
+          borderCrop: parseQuadBorderCropString(helperCrop) ?? [0, 0, 0, 0],
+        },
+      ],
+      null,
+      2,
+    );
+  }, [helperCrop, helperImageUrl, helperOverlay]);
+
+  const displayedQuadOverlays = useMemo(() => {
+    if (!helperOverlay) return quadOverlays;
+    return [...(quadOverlays ?? []), helperOverlay];
+  }, [helperOverlay, quadOverlays]);
 
   const existingLog = useMemo(() => {
     if (!planItem) return null;
@@ -758,7 +816,7 @@ export default function LogClient() {
                     </option>
                   ))}
                 </select>
-                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlays={quadOverlays} />
+                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlays={displayedQuadOverlays} />
                 {/* <ElevationChart profile={elevationProfile} /> */}
                 {baseLayer === "usgsQuad" && !quadOverlays?.length ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
@@ -774,6 +832,56 @@ export default function LogClient() {
                 ) : null}
                 {baseLayer === "usgsQuad" && quadOverlayStatus ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">{quadOverlayStatus}</span>
+                ) : null}
+                {baseLayer === "usgsQuad" ? (
+                  <div className="mt-3 rounded border border-stone-300 bg-stone-50 p-3 text-xs dark:border-stone-600 dark:bg-stone-800/40">
+                    <p className="font-medium text-stone-800 dark:text-stone-100">Overlay helper (live preview + copy/paste config)</p>
+                    <p className="mt-1 text-stone-600 dark:text-stone-300">
+                      Add an image URL, bounds, and crop percentages to preview instantly and generate
+                      NEXT_PUBLIC_USGS_QUAD_OVERLAYS JSON.
+                    </p>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <label>
+                        Image URL
+                        <input
+                          className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                          value={helperImageUrl}
+                          onChange={(event) => setHelperImageUrl(event.target.value)}
+                          placeholder="https://.../quad.png"
+                        />
+                      </label>
+                      <label>
+                        Bounds [south,west,north,east]
+                        <input
+                          className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                          value={helperBounds}
+                          onChange={(event) => setHelperBounds(event.target.value)}
+                          placeholder="39.4,-105.3,39.6,-105.1"
+                        />
+                      </label>
+                      <label className="sm:col-span-2">
+                        Crop [top,right,bottom,left] (0-1 decimals)
+                        <input
+                          className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                          value={helperCrop}
+                          onChange={(event) => setHelperCrop(event.target.value)}
+                          placeholder="0.02,0.02,0.02,0.02"
+                        />
+                      </label>
+                    </div>
+                    {helperStatus ? <p className="mt-2 text-amber-700 dark:text-amber-300">{helperStatus}</p> : null}
+                    {helperOverlayConfig ? (
+                      <label className="mt-2 block">
+                        Generated NEXT_PUBLIC_USGS_QUAD_OVERLAYS value
+                        <textarea
+                          className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 font-mono text-xs dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100"
+                          rows={6}
+                          value={helperOverlayConfig}
+                          readOnly
+                        />
+                      </label>
+                    ) : null}
+                  </div>
                 ) : null}
               </>
             ) : null}
