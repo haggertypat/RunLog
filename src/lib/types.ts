@@ -22,11 +22,11 @@ export type LogEntry = {
   date: string;
   title?: string;
   planItemId?: string;
-  week: number;
+  week: number | null;
   type: PlanItemType;
   distanceMi?: number;
   durationMin?: number;
-  rpe: number;
+  rpe: number | null;
   surface: string;
   notes: string;
   gpxFileName?: string;

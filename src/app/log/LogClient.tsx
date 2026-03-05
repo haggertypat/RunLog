@@ -163,11 +163,12 @@ function formatRange(min?: number, max?: number, unit = "") {
 function formatDurationValue(durationMin?: number) {
   if (typeof durationMin !== "number") return "—";
 
-  const roundedMinutes = Math.floor(durationMin);
-  const seconds = Math.round((durationMin - roundedMinutes) * 60);
+  const totalSeconds = Math.max(0, Math.round(durationMin * 60));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-  if (seconds === 0) return `${roundedMinutes} min`;
-  return `${roundedMinutes}m ${seconds}s`;
+  return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
 function parseDurationToMinutes(input: string): number | null {
@@ -220,8 +221,8 @@ function formatDateDisplay(value: string) {
   const parsed = new Date(`${value}T00:00:00`);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
+    month: "numeric",
+    day: "numeric",
     year: "numeric",
   });
 }
@@ -329,11 +330,11 @@ export default function LogClient() {
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [title, setTitle] = useState(planItem?.title ?? "");
-  const [week, setWeek] = useState(planItem?.week ?? 1);
+  const [week, setWeek] = useState(planItem?.week != null ? String(planItem.week) : "");
   const [type, setType] = useState<PlanItemType>(planItem?.type ?? "run");
   const [distanceMi, setDistanceMi] = useState("");
   const [durationMin, setDurationMin] = useState("");
-  const [rpe, setRpe] = useState(String(planItem?.targetRpeMin ?? 5));
+  const [rpe, setRpe] = useState(planItem?.targetRpeMin != null ? String(planItem.targetRpeMin) : "");
   const [surface, setSurface] = useState("");
   const [notes, setNotes] = useState("");
   const [gpxFileName, setGpxFileName] = useState("");
@@ -526,11 +527,11 @@ export default function LogClient() {
       if (!existingLog) {
         setDate(new Date().toISOString().slice(0, 10));
         setTitle(planItem?.title ?? "");
-        setWeek(planItem?.week ?? 1);
+        setWeek(planItem?.week != null ? String(planItem.week) : "");
         setType(planItem?.type ?? "run");
         setDistanceMi(planItem?.estimatedMilesMin != null ? String(planItem.estimatedMilesMin) : "");
         setDurationMin(planItem?.estimatedTimeMin != null ? String(planItem.estimatedTimeMin) : "");
-        setRpe(String(planItem?.targetRpeMin ?? 5));
+        setRpe(planItem?.targetRpeMin != null ? String(planItem.targetRpeMin) : "");
         setSurface("");
         setNotes("");
         setGpxFileName("");
@@ -542,11 +543,11 @@ export default function LogClient() {
 
       setDate(existingLog.date);
       setTitle(existingLog.title ?? planItem?.title ?? "");
-      setWeek(existingLog.week);
+      setWeek(existingLog.week != null ? String(existingLog.week) : "");
       setType(existingLog.type);
       setDistanceMi(existingLog.distanceMi != null ? String(existingLog.distanceMi) : "");
       setDurationMin(existingLog.durationMin != null ? String(existingLog.durationMin) : "");
-      setRpe(String(existingLog.rpe));
+      setRpe(existingLog.rpe != null ? String(existingLog.rpe) : "");
       setSurface(existingLog.surface);
       setNotes(existingLog.notes);
       setGpxFileName(existingLog.gpxFileName ?? "");
@@ -599,13 +600,13 @@ export default function LogClient() {
     setError(null);
     setSuccess(null);
 
-    const parsedWeek = Number(week);
-    const parsedRpe = Number(rpe);
+    const parsedWeek = week.trim() ? Number(week) : null;
+    const parsedRpe = rpe.trim() ? Number(rpe) : null;
 
     if (!date) return setError("Date is required.");
     if (!title.trim()) return setError("Title is required.");
-    if (!parsedWeek || parsedWeek < 1 || parsedWeek > 10) return setError("Week must be 1-10.");
-    if (!parsedRpe || parsedRpe < 1 || parsedRpe > 10) return setError("RPE must be 1-10.");
+    if (parsedWeek != null && (Number.isNaN(parsedWeek) || parsedWeek < 1 || parsedWeek > 10)) return setError("Week must be 1-10.");
+    if (parsedRpe != null && (Number.isNaN(parsedRpe) || parsedRpe < 1 || parsedRpe > 10)) return setError("RPE must be 1-10.");
 
     const parsedDurationMin = parseDurationToMinutes(durationMin);
     if (durationMin.trim() && parsedDurationMin == null) {
@@ -823,7 +824,7 @@ export default function LogClient() {
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Week</dt>
-                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.week}</dd>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.week ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Type</dt>
@@ -831,7 +832,7 @@ export default function LogClient() {
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">RPE</dt>
-                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.rpe}</dd>
+                <dd className="font-medium text-stone-900 dark:text-stone-100">{existingLog.rpe ?? "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-stone-500 dark:text-stone-400">Distance</dt>
@@ -937,7 +938,7 @@ export default function LogClient() {
           </label>
           <label className="text-sm">
             Week
-            <input type="number" min={1 } max={10} className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={week} onChange={(e) => setWeek(Number(e.target.value))} />
+            <input type="number" min={1 } max={10} placeholder="Optional" className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={week} onChange={(e) => setWeek(e.target.value)} />
           </label>
           <label className="text-sm">
             Type
@@ -948,7 +949,7 @@ export default function LogClient() {
           </label>
           <label className="text-sm">
             RPE (1-10)
-            <input type="number" min={1} max={10} className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={rpe} onChange={(e) => setRpe(e.target.value)} />
+            <input type="number" min={1} max={10} placeholder="Optional" className="mt-1 w-full rounded border border-stone-300 bg-white px-2 py-1.5 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-100" value={rpe} onChange={(e) => setRpe(e.target.value)} />
           </label>
           <label className="text-sm">
             Distance (mi)

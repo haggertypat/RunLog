@@ -89,9 +89,9 @@ function isLogEntry(value: unknown): value is LogEntry {
     typeof candidate.id === "string" &&
     typeof candidate.date === "string" &&
     (typeof candidate.title === "undefined" || typeof candidate.title === "string") &&
-    typeof candidate.week === "number" &&
+    (typeof candidate.week === "number" || candidate.week === null) &&
     (candidate.type === "run" || candidate.type === "strength") &&
-    typeof candidate.rpe === "number" &&
+    (typeof candidate.rpe === "number" || candidate.rpe === null) &&
     typeof candidate.surface === "string" &&
     typeof candidate.notes === "string" &&
     (typeof candidate.gpxFileName === "undefined" || typeof candidate.gpxFileName === "string") &&
