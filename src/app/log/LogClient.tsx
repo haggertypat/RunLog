@@ -315,7 +315,7 @@ export default function LogClient() {
   const [surface, setSurface] = useState("");
   const [notes, setNotes] = useState("");
   const [gpxFileName, setGpxFileName] = useState("");
-  const [gpxData, setGpxData] = useState("");
+  const [gpxUploadId, setGpxUploadId] = useState("");
   const [gpxSegments, setGpxSegments] = useState<LatLngTuple[][]>([]);
   const [elevationProfile, setElevationProfile] = useState<ElevationPoint[]>([]);
   const [baseLayer, setBaseLayer] = useState<BaseLayerId>("usgsQuad");
@@ -494,7 +494,25 @@ export default function LogClient() {
   }, []);
 
   useEffect(() => {
-    if (existingLog) {
+    let cancelled = false;
+
+    const loadExistingGpx = async () => {
+      if (!existingLog) {
+        setDate(new Date().toISOString().slice(0, 10));
+        setWeek(planItem?.week ?? 1);
+        setType(planItem?.type ?? "run");
+        setDistanceMi(planItem?.estimatedMilesMin != null ? String(planItem.estimatedMilesMin) : "");
+        setDurationMin(planItem?.estimatedTimeMin != null ? String(planItem.estimatedTimeMin) : "");
+        setRpe(String(planItem?.targetRpeMin ?? 5));
+        setSurface("");
+        setNotes("");
+        setGpxFileName("");
+        setGpxUploadId("");
+        setGpxSegments([]);
+        setElevationProfile([]);
+        return;
+      }
+
       setDate(existingLog.date);
       setWeek(existingLog.week);
       setType(existingLog.type);
@@ -504,35 +522,44 @@ export default function LogClient() {
       setSurface(existingLog.surface);
       setNotes(existingLog.notes);
       setGpxFileName(existingLog.gpxFileName ?? "");
-      setGpxData(existingLog.gpxData ?? "");
-      if (existingLog.gpxData) {
-        try {
-          const summary = parseGpxSummary(existingLog.gpxData);
+      setGpxUploadId(existingLog.gpxUploadId ?? "");
+
+      try {
+        const content = existingLog.gpxUploadId
+          ? await fetch(`/api/gpx/${existingLog.gpxUploadId}`).then(async (response) => {
+              if (!response.ok) throw new Error("Failed to load GPX from server.");
+              const payload = (await response.json()) as { content?: string };
+              if (!payload.content) throw new Error("GPX content missing.");
+              return payload.content;
+            })
+          : existingLog.gpxData;
+
+        if (!content) {
+          if (!cancelled) {
+            setGpxSegments([]);
+            setElevationProfile([]);
+          }
+          return;
+        }
+
+        const summary = parseGpxSummary(content);
+        if (!cancelled) {
           setGpxSegments(summary.segments);
           setElevationProfile(summary.elevationProfile);
-        } catch {
+        }
+      } catch {
+        if (!cancelled) {
           setGpxSegments([]);
           setElevationProfile([]);
         }
-      } else {
-        setGpxSegments([]);
-        setElevationProfile([]);
       }
-      return;
-    }
+    };
 
-    setDate(new Date().toISOString().slice(0, 10));
-    setWeek(planItem?.week ?? 1);
-    setType(planItem?.type ?? "run");
-    setDistanceMi(planItem?.estimatedMilesMin != null ? String(planItem.estimatedMilesMin) : "");
-    setDurationMin(planItem?.estimatedTimeMin != null ? String(planItem.estimatedTimeMin) : "");
-    setRpe(String(planItem?.targetRpeMin ?? 5));
-    setSurface("");
-    setNotes("");
-    setGpxFileName("");
-    setGpxData("");
-    setGpxSegments([]);
-    setElevationProfile([]);
+    loadExistingGpx();
+
+    return () => {
+      cancelled = true;
+    };
   }, [existingLog, planItem]);
 
   useEffect(() => {
@@ -568,7 +595,8 @@ export default function LogClient() {
       surface,
       notes,
       gpxFileName: gpxFileName || undefined,
-      gpxData: gpxData || undefined,
+      gpxUploadId: gpxUploadId || undefined,
+      gpxData: undefined,
       createdAt: existingLog?.createdAt ?? new Date().toISOString(),
     };
 
@@ -577,7 +605,7 @@ export default function LogClient() {
       const baseMessage = existingLog ? "Updated log." : "Saved log entry.";
       const gpxTrimmedMessage =
         result.strippedGpxCount > 0
-          ? ` ${result.strippedGpxCount} older GPX attachment${result.strippedGpxCount === 1 ? " was" : "s were"} removed to stay within browser storage limits.`
+          ? " GPX attachment could not be saved because browser storage is full."
           : "";
 
       setSuccess(`${baseMessage}${gpxTrimmedMessage}`);
@@ -594,8 +622,13 @@ export default function LogClient() {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!existingLog) return;
+
+    if (existingLog.gpxUploadId) {
+      await fetch(`/api/gpx/${existingLog.gpxUploadId}`, { method: "DELETE" });
+    }
+
     deleteLog(existingLog.id);
     setSuccess("Log deleted.");
     refreshLogs();
@@ -613,9 +646,25 @@ export default function LogClient() {
       const content = await file.text();
       const summary = parseGpxSummary(content);
 
+      const body = new FormData();
+      body.append("file", file);
+      const uploadResponse = await fetch("/api/gpx", { method: "POST", body });
+      if (!uploadResponse.ok) {
+        throw new Error("Unable to upload GPX file.");
+      }
+
+      const uploadPayload = (await uploadResponse.json()) as { uploadId?: string; fileName?: string };
+      if (!uploadPayload.uploadId) {
+        throw new Error("Upload completed but no file id was returned.");
+      }
+
+      if (gpxUploadId) {
+        await fetch(`/api/gpx/${gpxUploadId}`, { method: "DELETE" });
+      }
+
       setDistanceMi(summary.distanceMi.toFixed(2));
-      setGpxData(content);
-      setGpxFileName(file.name);
+      setGpxUploadId(uploadPayload.uploadId);
+      setGpxFileName(uploadPayload.fileName ?? file.name);
       setGpxSegments(summary.segments);
       setElevationProfile(summary.elevationProfile);
       if (summary.durationMin != null) {
@@ -631,8 +680,12 @@ export default function LogClient() {
     }
   };
 
-  const clearGpx = () => {
-    setGpxData("");
+  const clearGpx = async () => {
+    if (gpxUploadId) {
+      await fetch(`/api/gpx/${gpxUploadId}`, { method: "DELETE" });
+    }
+
+    setGpxUploadId("");
     setGpxFileName("");
     setGpxSegments([]);
     setElevationProfile([]);
