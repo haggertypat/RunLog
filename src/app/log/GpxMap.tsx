@@ -31,6 +31,7 @@ type LeafletNamespace = {
 };
 
 type LeafletMap = {
+  setView: (center: LatLngTuple, zoom: number) => void;
   remove: () => void;
 };
 
@@ -119,6 +120,11 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
       if (cancelled || !window.L || !mapRef.current) return;
 
       map = window.L.map(mapRef.current);
+
+      const initialPoint = segments.find((segment) => segment.length)?.[0];
+      if (initialPoint) {
+        map.setView(initialPoint, 13);
+      }
 
       window.L.tileLayer(layerConfig.url, {
         attribution: layerConfig.attribution,
