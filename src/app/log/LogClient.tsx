@@ -304,6 +304,8 @@ export default function LogClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planItemId = searchParams.get("planItemId") ?? "";
+  const logId = searchParams.get("logId") ?? "";
+  const startInEditMode = searchParams.get("mode") === "edit";
   const planItem = useMemo(() => (planItemId ? getPlanItemById(planItemId) : undefined), [planItemId]);
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -323,7 +325,7 @@ export default function LogClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [isEditing, setIsEditing] = useState(!planItem);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { configuredQuadOverlays, quadOverlayDebug } = useMemo(() => {
     const multiOverlayRaw = process.env.NEXT_PUBLIC_USGS_QUAD_OVERLAYS;
@@ -480,9 +482,13 @@ export default function LogClient() {
   }, [helperOverlay, quadOverlays]);
 
   const existingLog = useMemo(() => {
+    if (logId) {
+      return logs.find((log) => log.id === logId) ?? null;
+    }
+
     if (!planItem) return null;
     return logs.find((log) => log.planItemId === planItem.id) ?? null;
-  }, [logs, planItem]);
+  }, [logId, logs, planItem]);
 
   const refreshLogs = () => {
     setLogs(loadLogs());
@@ -563,8 +569,8 @@ export default function LogClient() {
   }, [existingLog, planItem]);
 
   useEffect(() => {
-    setIsEditing(!existingLog);
-  }, [existingLog]);
+    setIsEditing(startInEditMode || !existingLog);
+  }, [existingLog, startInEditMode]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -586,7 +592,7 @@ export default function LogClient() {
     const entry: LogEntry = {
       id: existingLog?.id ?? crypto.randomUUID(),
       date,
-      planItemId: planItem?.id,
+      planItemId: planItem?.id ?? existingLog?.planItemId,
       week: parsedWeek,
       type,
       distanceMi: distanceMi ? Number(distanceMi) : undefined,
@@ -695,10 +701,10 @@ export default function LogClient() {
   return (
     <section className="space-y-4">
       <Link
-        href="/plan"
+        href={planItem ? "/plan" : "/logs"}
         className="inline-flex items-center text-sm font-medium text-stone-700 underline-offset-2 hover:underline dark:text-stone-200"
       >
-        ← Back to plan
+        {planItem ? "← Back to plan" : "← Back to logs"}
       </Link>
 
       {planItem ? (

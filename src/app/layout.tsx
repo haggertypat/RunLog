@@ -20,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <nav className="flex flex-wrap gap-2 text-xs">
                 <Link href="/plan" className="rounded border border-stone-300 px-2 py-1 dark:border-stone-600">Plan</Link>
                 <Link href="/log" className="rounded border border-stone-300 px-2 py-1 dark:border-stone-600">Log</Link>
+                <Link href="/logs" className="rounded border border-stone-300 px-2 py-1 dark:border-stone-600">Logs</Link>
                 <Link href="/map" className="rounded border border-stone-300 px-2 py-1 dark:border-stone-600">Map</Link>
               </nav>
             </div>
