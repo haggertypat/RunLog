@@ -149,7 +149,7 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
 
       segments.forEach((segment) => {
         window.L?.polyline(segment, {
-          color: "#0069a8",
+          color: "#497d00",
           weight: 4,
         }).addTo(map as LeafletMap);
       });
