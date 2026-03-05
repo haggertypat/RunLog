@@ -19,8 +19,27 @@ const GpxMap = dynamic(() => import("@/app/log/GpxMap"), {
 type BaseLayerId = "osm" | "cartoLight" | "esriImagery" | "usgsTopo" | "usgsQuad";
 type QuadBounds = [number, number, number, number];
 type QuadBorderCrop = [number, number, number, number];
+const MAP_LAYER_OPTIONS: { id: BaseLayerId; label: string }[] = [
+  { id: "osm", label: "OpenStreetMap" },
+  { id: "cartoLight", label: "CARTO Positron" },
+  { id: "esriImagery", label: "Esri Satellite" },
+  { id: "usgsTopo", label: "USGS Topo" },
+  { id: "usgsQuad", label: "USGS Quad (custom image overlay)" },
+];
 
-async function cropQuadImageUrl(imageUrl: string, crop?: QuadBorderCrop | null): Promise<string> {
+type QuadOverlay = {
+  imageUrl: string;
+  bounds: QuadBounds;
+  opacity?: number;
+  borderCrop?: QuadBorderCrop;
+};
+
+type QuadOverlayDebug = {
+  source: "multi" | "single" | "none";
+  parseWarning?: string;
+};
+
+async function cropQuadImageUrl(imageUrl: string, crop?: QuadBorderCrop): Promise<string> {
   if (!crop) return imageUrl;
 
   const image = new Image();
@@ -50,28 +69,87 @@ async function cropQuadImageUrl(imageUrl: string, crop?: QuadBorderCrop | null):
   return canvas.toDataURL("image/png");
 }
 
-const MAP_LAYER_OPTIONS: { id: BaseLayerId; label: string }[] = [
-  { id: "osm", label: "OpenStreetMap" },
-  { id: "cartoLight", label: "CARTO Positron" },
-  { id: "esriImagery", label: "Esri Satellite" },
-  { id: "usgsTopo", label: "USGS Topo" },
-  { id: "usgsQuad", label: "USGS Quad (custom image overlay)" },
-];
+function parseQuadBorderCrop(value: unknown): QuadBorderCrop | undefined {
+  const parts = Array.isArray(value) ? value.map((part) => Number(part)) : null;
+  if (!parts || parts.length !== 4 || parts.some((part) => !Number.isFinite(part) || part < 0 || part >= 1)) {
+    return undefined;
+  }
+
+  const [top, right, bottom, left] = parts;
+  if (top + bottom >= 1 || left + right >= 1) return undefined;
+  return [top, right, bottom, left];
+}
+
+function parseQuadBorderCropString(value: string | undefined): QuadBorderCrop | undefined {
+  if (!value) return undefined;
+  const parts = value.split(",").map((part) => Number(part.trim()));
+  return parseQuadBorderCrop(parts);
+}
+
+function unwrapWrappedJsonString(value: string): string {
+  let normalized = value.trim();
+
+  for (let index = 0; index < 2; index += 1) {
+    const isSingleQuoted = normalized.startsWith("'") && normalized.endsWith("'");
+    const isDoubleQuoted = normalized.startsWith('"') && normalized.endsWith('"');
+
+    if (!isSingleQuoted && !isDoubleQuoted) break;
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized;
+}
+
+function parseQuadOverlays(value: string | undefined): QuadOverlay[] {
+  if (!value?.trim()) return [];
+
+  try {
+    let parsed: unknown = JSON.parse(unwrapWrappedJsonString(value));
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(unwrapWrappedJsonString(parsed));
+    }
+
+    const source =
+      Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).overlays : null;
+
+    if (!Array.isArray(source)) return [];
+
+    const overlays: QuadOverlay[] = [];
+
+    for (const item of source) {
+      if (!item || typeof item !== "object") continue;
+      const itemRecord = item as Record<string, unknown>;
+
+      const imageUrl = typeof itemRecord.imageUrl === "string" ? itemRecord.imageUrl : null;
+      const boundsSource = Array.isArray(itemRecord.bounds) ? itemRecord.bounds : null;
+
+      if (!imageUrl || !boundsSource || boundsSource.length !== 4) continue;
+
+      const bounds = boundsSource.map((part: unknown) => Number(part));
+      if (bounds.some((part) => !Number.isFinite(part))) continue;
+
+      const borderCrop = parseQuadBorderCrop(itemRecord.borderCrop);
+
+      overlays.push({
+        imageUrl,
+        bounds: [bounds[0], bounds[1], bounds[2], bounds[3]] as QuadBounds,
+        opacity: 1,
+        borderCrop,
+      });
+    }
+
+    return overlays;
+  } catch {
+    return [];
+  }
+}
+
 
 function parseQuadBounds(value: string | undefined): QuadBounds | null {
   if (!value) return null;
   const parts = value.split(",").map((part) => Number(part.trim()));
   if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part))) return null;
   return [parts[0], parts[1], parts[2], parts[3]];
-}
-
-function parseQuadBorderCrop(value: string | undefined): QuadBorderCrop | null {
-  if (!value) return null;
-  const parts = value.split(",").map((part) => Number(part.trim()));
-  if (parts.length !== 4 || parts.some((part) => !Number.isFinite(part) || part < 0 || part >= 1)) return null;
-  const [top, right, bottom, left] = parts;
-  if (top + bottom >= 1 || left + right >= 1) return null;
-  return [top, right, bottom, left];
 }
 
 function formatRange(min?: number, max?: number, unit = "") {
@@ -247,49 +325,101 @@ export default function LogClient() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isEditing, setIsEditing] = useState(!planItem);
 
-  const [croppedQuadImageUrl, setCroppedQuadImageUrl] = useState<string | null>(null);
+  const { configuredQuadOverlays, quadOverlayDebug } = useMemo(() => {
+    const multiOverlayRaw = process.env.NEXT_PUBLIC_USGS_QUAD_OVERLAYS;
+    const configuredOverlays = parseQuadOverlays(multiOverlayRaw);
 
-  const quadOverlay = useMemo(() => {
-    const imageUrl = croppedQuadImageUrl ?? process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
-    const bounds = parseQuadBounds(process.env.NEXT_PUBLIC_USGS_QUAD_BOUNDS);
-
-    if (!imageUrl || !bounds) return undefined;
-
-    return {
-      imageUrl,
-      bounds,
-      opacity: 1,
-    };
-  }, [croppedQuadImageUrl]);
-
-
-  useEffect(() => {
-    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
-    const borderCrop = parseQuadBorderCrop(process.env.NEXT_PUBLIC_USGS_QUAD_BORDER_CROP);
-
-    if (!imageUrl || !borderCrop) {
-      setCroppedQuadImageUrl(null);
-      return;
+    if (configuredOverlays.length) {
+      return {
+        configuredQuadOverlays: configuredOverlays,
+        quadOverlayDebug: { source: "multi" } as QuadOverlayDebug,
+      };
     }
 
+    if (multiOverlayRaw?.trim()) {
+      return {
+        configuredQuadOverlays: undefined,
+        quadOverlayDebug: {
+          source: "none",
+          parseWarning:
+            "NEXT_PUBLIC_USGS_QUAD_OVERLAYS is set but no valid overlays were parsed. Confirm valid JSON and bounds format [south,west,north,east].",
+        } as QuadOverlayDebug,
+      };
+    }
+
+    const imageUrl = process.env.NEXT_PUBLIC_USGS_QUAD_IMAGE_URL;
+    const bounds = parseQuadBounds(process.env.NEXT_PUBLIC_USGS_QUAD_BOUNDS);
+    if (!imageUrl || !bounds) {
+      return {
+        configuredQuadOverlays: undefined,
+        quadOverlayDebug: { source: "none" } as QuadOverlayDebug,
+      };
+    }
+
+    const borderCrop = parseQuadBorderCropString(process.env.NEXT_PUBLIC_USGS_QUAD_BORDER_CROP);
+
+    return {
+      configuredQuadOverlays: [
+        {
+          imageUrl,
+          bounds,
+          opacity: 1,
+          borderCrop,
+        },
+      ],
+      quadOverlayDebug: { source: "single" } as QuadOverlayDebug,
+    };
+  }, []);
+
+  const [quadOverlays, setQuadOverlays] = useState<QuadOverlay[] | undefined>(configuredQuadOverlays);
+  const [quadOverlayStatus, setQuadOverlayStatus] = useState<string | null>(null);
+
+  useEffect(() => {
     let cancelled = false;
 
-    cropQuadImageUrl(imageUrl, borderCrop)
-      .then((url) => {
-        if (!cancelled) {
-          setCroppedQuadImageUrl(url);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCroppedQuadImageUrl(null);
-        }
-      });
+    const processQuadOverlays = async () => {
+      if (!configuredQuadOverlays?.length) {
+        setQuadOverlays(undefined);
+        setQuadOverlayStatus(quadOverlayDebug.parseWarning ?? null);
+        return;
+      }
+
+      const processed = await Promise.all(
+        configuredQuadOverlays.map(async (overlay) => {
+          const croppedImageUrl = await cropQuadImageUrl(overlay.imageUrl, overlay.borderCrop);
+          return {
+            imageUrl: croppedImageUrl,
+            bounds: overlay.bounds,
+            opacity: 1,
+          } as QuadOverlay;
+        }),
+      );
+
+      if (!cancelled) {
+        setQuadOverlays(processed);
+        setQuadOverlayStatus(null);
+      }
+    };
+
+    processQuadOverlays().catch((cropError) => {
+      if (!cancelled) {
+        setQuadOverlays(
+          configuredQuadOverlays?.map((overlay) => ({
+            imageUrl: overlay.imageUrl,
+            bounds: overlay.bounds,
+            opacity: 1,
+          })),
+        );
+        const cropErrorMessage = cropError instanceof Error ? cropError.message : "Unknown crop error.";
+        setQuadOverlayStatus(`Using original overlay images (crop failed): ${cropErrorMessage}`);
+        console.warn("USGS overlay crop failed; using original images.", cropError);
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [configuredQuadOverlays, quadOverlayDebug.parseWarning]);
 
   const existingLog = useMemo(() => {
     if (!planItem) return null;
@@ -513,9 +643,15 @@ export default function LogClient() {
                   <GpxMap
                     segments={gpxSegments}
                     baseLayer={baseLayer}
-                    quadOverlay={quadOverlay}
+                    quadOverlays={quadOverlays}
                     heightClassName="h-[500px]"
                   />
+                  {baseLayer === "usgsQuad" ? (
+                    <p className="mt-1 text-xs text-stone-600 dark:text-stone-300">
+                      Overlay source: {quadOverlayDebug.source}; active overlays: {quadOverlays?.length ?? 0}.
+                      {quadOverlayStatus ? ` ${quadOverlayStatus}` : ""}
+                    </p>
+                  ) : null}
                   {/* <ElevationChart profile={elevationProfile} /> */}
                 </>
               ) : null}
@@ -612,14 +748,22 @@ export default function LogClient() {
                     </option>
                   ))}
                 </select>
-                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlay={quadOverlay} />
+                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlays={quadOverlays} />
                 {/* <ElevationChart profile={elevationProfile} /> */}
-                {baseLayer === "usgsQuad" && !quadOverlay ? (
+                {baseLayer === "usgsQuad" && !quadOverlays?.length ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
-                    To use your own USGS quad image, set NEXT_PUBLIC_USGS_QUAD_IMAGE_URL and
-                    NEXT_PUBLIC_USGS_QUAD_BOUNDS=&quot;south,west,north,east&quot;. Optional:
-                    NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot; (fractions like 0.06).
+                    Configure custom quads with NEXT_PUBLIC_USGS_QUAD_OVERLAYS (JSON array) or fallback
+                    NEXT_PUBLIC_USGS_QUAD_IMAGE_URL + NEXT_PUBLIC_USGS_QUAD_BOUNDS. Optional crop:
+                    NEXT_PUBLIC_USGS_QUAD_BORDER_CROP=&quot;top,right,bottom,left&quot;.
                   </span>
+                ) : null}
+                {baseLayer === "usgsQuad" ? (
+                  <span className="mt-1 block text-xs text-stone-600 dark:text-stone-300">
+                    Overlay source: {quadOverlayDebug.source}; active overlays: {quadOverlays?.length ?? 0}.
+                  </span>
+                ) : null}
+                {baseLayer === "usgsQuad" && quadOverlayStatus ? (
+                  <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">{quadOverlayStatus}</span>
                 ) : null}
               </>
             ) : null}

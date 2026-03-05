@@ -16,7 +16,7 @@ export type QuadOverlay = {
 type GpxMapProps = {
   segments: LatLngTuple[][];
   baseLayer: BaseLayerId;
-  quadOverlay?: QuadOverlay;
+  quadOverlays?: QuadOverlay[];
   heightClassName?: string;
 };
 
@@ -106,7 +106,7 @@ async function ensureLeaflet() {
   });
 }
 
-export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassName = "h-72" }: GpxMapProps) {
+export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassName = "h-72" }: GpxMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const layerConfig = useMemo(() => BASE_LAYER_CONFIG[baseLayer], [baseLayer]);
 
@@ -128,11 +128,13 @@ export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassNa
         maxZoom: layerConfig.maxZoom,
       }).addTo(map);
 
-      if (baseLayer === "usgsQuad" && quadOverlay) {
-        const [south, west, north, east] = quadOverlay.bounds;
-        window.L.imageOverlay(quadOverlay.imageUrl, [[south, west], [north, east]], {
-          opacity: quadOverlay.opacity ?? 0.75,
-        }).addTo(map);
+      if (baseLayer === "usgsQuad" && quadOverlays?.length) {
+        quadOverlays.forEach((overlay) => {
+          const [south, west, north, east] = overlay.bounds;
+          window.L?.imageOverlay(overlay.imageUrl, [[south, west], [north, east]], {
+            opacity: overlay.opacity ?? 1,
+          }).addTo(map as LeafletMap);
+        });
       }
 
       segments.forEach((segment) => {
@@ -154,7 +156,7 @@ export default function GpxMap({ segments, baseLayer, quadOverlay, heightClassNa
       cancelled = true;
       map?.remove();
     };
-  }, [segments, layerConfig, baseLayer, quadOverlay]);
+  }, [segments, layerConfig, baseLayer, quadOverlays]);
 
   return (
     <div
