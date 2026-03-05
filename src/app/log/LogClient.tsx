@@ -712,7 +712,7 @@ export default function LogClient() {
                     segments={gpxSegments}
                     baseLayer={baseLayer}
                     quadOverlays={displayedQuadOverlays}
-                    heightClassName="h-[500px]"
+                    heightClassName="h-72"
                   />
                   {baseLayer === "usgsQuad" ? (
                     <p className="mt-1 text-xs text-stone-600 dark:text-stone-300">
