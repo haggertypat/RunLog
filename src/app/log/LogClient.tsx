@@ -86,16 +86,37 @@ function parseQuadBorderCropString(value: string | undefined): QuadBorderCrop | 
   return parseQuadBorderCrop(parts);
 }
 
+function unwrapWrappedJsonString(value: string): string {
+  let normalized = value.trim();
+
+  for (let index = 0; index < 2; index += 1) {
+    const isSingleQuoted = normalized.startsWith("'") && normalized.endsWith("'");
+    const isDoubleQuoted = normalized.startsWith('"') && normalized.endsWith('"');
+
+    if (!isSingleQuoted && !isDoubleQuoted) break;
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  return normalized;
+}
+
 function parseQuadOverlays(value: string | undefined): QuadOverlay[] {
-  if (!value) return [];
+  if (!value?.trim()) return [];
 
   try {
-    const parsed: unknown = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
+    let parsed: unknown = JSON.parse(unwrapWrappedJsonString(value));
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(unwrapWrappedJsonString(parsed));
+    }
+
+    const source =
+      Array.isArray(parsed) ? parsed : parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>).overlays : null;
+
+    if (!Array.isArray(source)) return [];
 
     const overlays: QuadOverlay[] = [];
 
-    for (const item of parsed) {
+    for (const item of source) {
       if (!item || typeof item !== "object") continue;
       const itemRecord = item as Record<string, unknown>;
 
