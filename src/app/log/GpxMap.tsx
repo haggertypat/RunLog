@@ -27,12 +27,13 @@ type LeafletNamespace = {
     options: { attribution: string; maxZoom?: number },
   ) => { addTo: (map: LeafletMap) => void };
   polyline: (positions: LatLngTuple[], options: { color: string; weight: number }) => { addTo: (map: LeafletMap) => void };
-  latLngBounds: (positions: LatLngTuple[] | [LatLngTuple, LatLngTuple]) => unknown;
   imageOverlay: (imageUrl: string, bounds: [LatLngTuple, LatLngTuple], options: { opacity: number }) => { addTo: (map: LeafletMap) => void };
 };
 
 type LeafletMap = {
-  fitBounds: (bounds: unknown, options: { padding: [number, number] }) => void;
+  setView: (center: LatLngTuple, zoom: number) => void;
+  getCenter: () => { lat: number; lng: number };
+  getZoom: () => number;
   remove: () => void;
 };
 
@@ -108,6 +109,7 @@ async function ensureLeaflet() {
 
 export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassName = "h-72" }: GpxMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const savedViewRef = useRef<{ center: LatLngTuple; zoom: number } | null>(null);
   const layerConfig = useMemo(() => BASE_LAYER_CONFIG[baseLayer], [baseLayer]);
 
   useEffect(() => {
@@ -120,8 +122,16 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
       await ensureLeaflet();
       if (cancelled || !window.L || !mapRef.current) return;
 
-      const routePoints = segments.flat();
       map = window.L.map(mapRef.current);
+
+      if (savedViewRef.current) {
+        map.setView(savedViewRef.current.center, savedViewRef.current.zoom);
+      } else {
+        const initialPoint = segments.find((segment) => segment.length)?.[0];
+        if (initialPoint) {
+          map.setView(initialPoint, 13);
+        }
+      }
 
       window.L.tileLayer(layerConfig.url, {
         attribution: layerConfig.attribution,
@@ -144,17 +154,20 @@ export default function GpxMap({ segments, baseLayer, quadOverlays, heightClassN
         }).addTo(map as LeafletMap);
       });
 
-      const bounds = window.L.latLngBounds(routePoints);
-      map.fitBounds(bounds, {
-        padding: [24, 24],
-      });
     };
 
     renderMap();
 
     return () => {
       cancelled = true;
-      map?.remove();
+      if (map) {
+        const center = map.getCenter();
+        savedViewRef.current = {
+          center: [center.lat, center.lng],
+          zoom: map.getZoom(),
+        };
+        map.remove();
+      }
     };
   }, [segments, layerConfig, baseLayer, quadOverlays]);
 

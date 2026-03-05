@@ -373,6 +373,11 @@ export default function LogClient() {
 
   const [quadOverlays, setQuadOverlays] = useState<QuadOverlay[] | undefined>(configuredQuadOverlays);
   const [quadOverlayStatus, setQuadOverlayStatus] = useState<string | null>(null);
+  const [helperImageUrl, setHelperImageUrl] = useState("");
+  const [helperBounds, setHelperBounds] = useState("");
+  const [helperCrop, setHelperCrop] = useState("0,0,0,0");
+  const [helperOverlay, setHelperOverlay] = useState<QuadOverlay | null>(null);
+  const [helperStatus, setHelperStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -420,6 +425,59 @@ export default function LogClient() {
       cancelled = true;
     };
   }, [configuredQuadOverlays, quadOverlayDebug.parseWarning]);
+
+  useEffect(() => {
+    const trimmedImageUrl = helperImageUrl.trim();
+    const parsedBounds = parseQuadBounds(helperBounds);
+
+    if (!trimmedImageUrl || !parsedBounds) {
+      setHelperOverlay(null);
+      setHelperStatus(null);
+      return;
+    }
+
+    const parsedCrop = parseQuadBorderCropString(helperCrop);
+
+    cropQuadImageUrl(trimmedImageUrl, parsedCrop)
+      .then((croppedImageUrl) => {
+        setHelperOverlay({
+          imageUrl: croppedImageUrl,
+          bounds: parsedBounds,
+          opacity: 0.9,
+        });
+        setHelperStatus(null);
+      })
+      .catch((cropError) => {
+        setHelperOverlay({
+          imageUrl: trimmedImageUrl,
+          bounds: parsedBounds,
+          opacity: 0.9,
+        });
+        const cropErrorMessage = cropError instanceof Error ? cropError.message : "Unknown crop error.";
+        setHelperStatus(`Crop preview failed, using original image: ${cropErrorMessage}`);
+      });
+  }, [helperBounds, helperCrop, helperImageUrl]);
+
+  const helperOverlayConfig = useMemo(() => {
+    if (!helperOverlay) return "";
+
+    return JSON.stringify(
+      [
+        {
+          imageUrl: helperImageUrl.trim(),
+          bounds: helperOverlay.bounds,
+          borderCrop: parseQuadBorderCropString(helperCrop) ?? [0, 0, 0, 0],
+        },
+      ],
+      null,
+      2,
+    );
+  }, [helperCrop, helperImageUrl, helperOverlay]);
+
+  const displayedQuadOverlays = useMemo(() => {
+    if (!helperOverlay) return quadOverlays;
+    return [...(quadOverlays ?? []), helperOverlay];
+  }, [helperOverlay, quadOverlays]);
 
   const existingLog = useMemo(() => {
     if (!planItem) return null;
@@ -653,8 +711,8 @@ export default function LogClient() {
                   <GpxMap
                     segments={gpxSegments}
                     baseLayer={baseLayer}
-                    quadOverlays={quadOverlays}
-                    heightClassName="h-[500px]"
+                    quadOverlays={displayedQuadOverlays}
+                    heightClassName="h-72"
                   />
                   {baseLayer === "usgsQuad" ? (
                     <p className="mt-1 text-xs text-stone-600 dark:text-stone-300">
@@ -662,7 +720,7 @@ export default function LogClient() {
                       {quadOverlayStatus ? ` ${quadOverlayStatus}` : ""}
                     </p>
                   ) : null}
-                  {/* <ElevationChart profile={elevationProfile} /> */}
+                                  {/* <ElevationChart profile={elevationProfile} /> */}
                 </>
               ) : null}
 
@@ -758,7 +816,7 @@ export default function LogClient() {
                     </option>
                   ))}
                 </select>
-                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlays={quadOverlays} />
+                <GpxMap segments={gpxSegments} baseLayer={baseLayer} quadOverlays={displayedQuadOverlays} />
                 {/* <ElevationChart profile={elevationProfile} /> */}
                 {baseLayer === "usgsQuad" && !quadOverlays?.length ? (
                   <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
